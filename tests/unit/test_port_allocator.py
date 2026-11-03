@@ -152,3 +152,19 @@ def test_probe_bind_detects_ipv6_only_listener() -> None:
         sock.listen()
         port = sock.getsockname()[1]
         assert probe_bind(port) is False
+
+
+def test_probe_bind_without_ipv6_support(monkeypatch: pytest.MonkeyPatch) -> None:
+    """IPv6 выключен в ядре (ipv6.disable=1): сокет AF_INET6 не создаётся — порт свободен по IPv4."""
+    real_socket = socket.socket
+
+    def no_ipv6(family: int = socket.AF_INET, *args: object, **kwargs: object) -> socket.socket:
+        if family == socket.AF_INET6:
+            raise OSError(97, "Address family not supported by protocol")
+        return real_socket(family, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "socket", no_ipv6)
+    with real_socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    assert probe_bind(port) is True

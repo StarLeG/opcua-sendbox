@@ -62,7 +62,8 @@ docker compose up -d --build              # см. docs/DEPLOY.md
    `asyncio.to_thread` или reader-нити.
 5. **Общий сервер read-only.**
 6. **Bind на все интерфейсы (IPv4 и IPv6)** — `socket_address=(None, port)`: на Windows
-   `localhost` резолвится в `::1`. В Docker — `OPCUA_BIND_HOST=0.0.0.0`.
+   `localhost` резолвится в `::1`. В Docker — `OPCUA_BIND_HOST=0.0.0.0` (IPv6 снаружи
+   обслуживает Docker); пустое значение работает и при отключённом IPv6.
 7. **Endpoint объявляет `OPCUA_PUBLIC_HOST`**, `set_match_discovery_client_ip(False)` —
    иначе в GetEndpoints уходит IP контейнера (ADR-002 п. 1).
 

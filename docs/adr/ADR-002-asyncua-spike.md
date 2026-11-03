@@ -1,6 +1,6 @@
 # ADR-002 · Спайк asyncua: endpoint, история, алармы, счётчик клиентов
 
-- **Статус:** принято. Открыто: endpoint внутри Docker-контейнера (ждёт запуска Docker, ядро не блокирует); UaExpert A&C View — в приёмке перед деплоем
+- **Статус:** принято. Endpoint в Docker проверен (см. «Проверка в Docker»); UaExpert A&C View — в приёмке перед деплоем
 - **Дата:** 2026-11-03
 - **Задача:** TASK-002
 - **Версия:** asyncua 2.1.0 (`uv.lock`), Python 3.14, Windows 11
@@ -168,6 +168,26 @@ writable-тег сервер сам проставляет SourceTimestamp те�
 
 Проверено на 2.1.0. Диапазон в `pyproject.toml`: `asyncua>=2.1,<3` (подтверждено владельцем
 2026-11-03; ориентир `<2` из плана был дан до выхода ветки 2.x). Точная версия — в `uv.lock`.
+
+## Проверка в Docker (2026-11-03)
+
+Docker 29.7.2 (Docker Desktop, linux/amd64), образ из `Dockerfile`, контейнер с IP
+`172.17.0.2`, порты опубликованы один к одному, `OPCUA_PUBLIC_HOST=localhost`.
+
+| Проверка | Результат |
+|---|---|
+| GetEndpoints снаружи без EndpointUrl | PASS: `opc.tcp://localhost:4870/electroman/`, IP контейнера в ответе нет |
+| GetEndpoints с EndpointUrl клиента | PASS: тот же адрес |
+| CreateSession + ActivateSession + Read по `localhost`, `127.0.0.1`, `[::1]` | PASS |
+| Личная сессия через REST: endpoint и GetEndpoints | PASS: `localhost:4871`, запись в Setpoint работает |
+| `OPCUA_BIND_HOST=` (все интерфейсы) при `disable_ipv6=1` в контейнере | PASS: bind на `::` работает, общий сервер и сессии стартуют |
+
+Предположение «Docker отключает IPv6 в контейнере, и bind на `::` упадёт» не
+подтвердилось: `0.0.0.0` в compose оставлен как достаточный, но не обязательный. Найден
+другой крайний случай — IPv6, выключенный в ядре целиком (`ipv6.disable=1`): сокет
+AF_INET6 не создаётся, и `probe_bind` падал вне `try`, роняя выдачу портов. Исправлено:
+проба пропускает неподдерживаемое семейство адресов (тест
+`test_probe_bind_without_ipv6_support`).
 
 ## Журнал обмена ModbusToolkit: прочие наблюдения
 

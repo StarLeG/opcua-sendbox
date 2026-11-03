@@ -33,7 +33,15 @@ def probe_bind(port: int, host: str | None = None) -> bool:
     if socket.has_ipv6 and (host is None or ":" in host):
         families.append((socket.AF_INET6, host or "::"))
     for family, address in families:
-        with socket.socket(family, socket.SOCK_STREAM) as sock:
+        try:
+            sock = socket.socket(family, socket.SOCK_STREAM)
+        except OSError:
+            if family == socket.AF_INET6:
+                # IPv6 выключен в ядре целиком (ipv6.disable=1): сокет не создать,
+                # и asyncio тоже будет слушать только IPv4 — проверять нечего.
+                continue
+            return False
+        with sock:
             if os.name != "nt":
                 # Как asyncio.create_server на POSIX: иначе соединения в TIME_WAIT
                 # после отключения клиентов делали бы свободный порт «занятым» ~60 с.

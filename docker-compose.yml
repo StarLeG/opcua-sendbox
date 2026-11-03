@@ -23,8 +23,9 @@ services:
       - "${WEB_PORT:-8766}:8766"
     environment:
       OPCUA_PUBLIC_HOST: "${OPCUA_PUBLIC_HOST:-opcua-sendbox.electroman.by}"
-      # Внутри контейнера — только IPv4: Docker на сетях без IPv6 отключает его
-      # в контейнере, и bind на :: упал бы. Снаружи IPv4/IPv6 обслуживает Docker.
+      # Внутри контейнера достаточно IPv4: внешний IPv4/IPv6 обслуживает Docker.
+      # Пустое значение (все интерфейсы) тоже работает, в том числе с
+      # disable_ipv6=1 — проверено (ADR-002, «Проверка в Docker»).
       OPCUA_BIND_HOST: "0.0.0.0"
       OPCUA_SHARED_PORT: "4840"
       OPCUA_SESSION_PORT_MIN: "4841"

@@ -20,7 +20,7 @@
 ## Эпик 0 · Фундамент
 
 - [x] [P0] **TASK-001 · git, скаффолд, ADR-000/001, CI**
-- [x] [P0] **TASK-002 · Спайк asyncua (ADR-002)** — открыто: Docker (TASK-302), UaExpert A&C (приёмка)
+- [x] [P0] **TASK-002 · Спайк asyncua (ADR-002)** — открыто: UaExpert A&C (приёмка, DEPLOY.md)
   - endpoint за NAT/Docker: GetEndpoints и CreateSession/ActivateSession с публичным хостом
   - HistoryRead до остановки сервера: внутренняя запись и запись внешним клиентом без SourceTimestamp
   - ExclusiveLimitAlarmType: какие поля доходят до asyncua.Client, ModbusToolkit, UaExpert
@@ -43,5 +43,5 @@
 ## Эпик 3 · Эксплуатация
 
 - [x] [P1] **TASK-301 · Логи `LOG_FORMAT`, `/metrics`, `/healthz`**
-- [x] [P1] **TASK-302 · Docker/compose, nginx, systemd, `docs/DEPLOY.md`** — сборка образа и endpoint в контейнере не проверены (Docker не запущен), пункт чек-листа DEPLOY.md
+- [x] [P1] **TASK-302 · Docker/compose, nginx, systemd, `docs/DEPLOY.md`** — образ собран, endpoint в контейнере проверен (ADR-002)
 - [x] [P1] **TASK-303 · README, обновление CLAUDE.md**
