@@ -29,7 +29,7 @@
 ## Эпик 1 · Ядро OPC UA
 
 - [x] [P0] **TASK-101 · `config.py`, `tags.py` (схемы тегов/алармов), `generators.py` + unit-тесты**
-- [ ] [P0] **TASK-102 · `PortAllocator` + unit-тесты (конкурентность на потоках)**
+- [x] [P0] **TASK-102 · `PortAllocator` + unit-тесты (конкурентность на потоках)**
 - [ ] [P0] **TASK-103 · `address_space.py`: узлы, обновление, writable, `SendBoxHistory`, `AlarmEvaluator`**
 - [ ] [P0] **TASK-104 · `worker.py` + `worker_handle.py`: процесс, IPC, backpressure telemetry**
 - [ ] [P0] **TASK-105 · `SessionManager` + `keys.py`: лимиты, reaper, crash, общий сервер**
