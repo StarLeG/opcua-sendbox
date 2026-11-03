@@ -1,0 +1,49 @@
+# Dependabot: еженедельные PR с обновлениями экшенов CI и Python-зависимостей.
+#
+# Сообщения коммитов - в Conventional Commits, чтобы уровень SemVer читался
+# из истории: ci(deps) версию не поднимает, build(deps) даёт PATCH.
+# Экшены в ci.yml закреплены по SHA с версией в комментарии - Dependabot
+# обновляет и SHA, и комментарий.
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      timezone: "Europe/Minsk"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "ci"
+      - "dependencies"
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      timezone: "Europe/Minsk"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 5
+    groups:
+      # Тесты и линтеры - одним PR: они не попадают в рабочий сервер.
+      dev-tools:
+        dependency-type: "development"
+      # Мелкие обновления рабочих зависимостей - одним PR;
+      # мажорные версии (asyncua, fastapi, uvicorn) приходят отдельно.
+      runtime-minor:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"

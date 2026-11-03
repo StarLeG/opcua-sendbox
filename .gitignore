@@ -1,0 +1,15 @@
+.venv/
+.claude/
+__pycache__/
+*.py[cod]
+.env
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+
+# рабочие скриншоты приёмки UI — не коммитить
+ui-*.png
+.playwright-mcp/
