@@ -30,13 +30,23 @@
 
 ```python
 server.set_endpoint(f"opc.tcp://{public_host}:{public_port}/electroman/")
-server.socket_address = ("0.0.0.0", bind_port)
+server.socket_address = (None, bind_port)    # все интерфейсы: IPv4 и IPv6
 server.set_match_discovery_client_ip(False)   # не подставлять sockname (IP контейнера)
 # match_discovery_endpoint_url оставляем True: клиент получает тот адрес, по которому пришёл
 ```
 
-`socket_address` — публичный атрибут `Server`, но в документации не описан; закрываем
-unit-тестом (ADR-000, «Зависимость от приватного API»).
+**Bind только на `0.0.0.0` недостаточен** (найдено при ручной проверке). Сервер слушал
+только IPv4, а на Windows `localhost` разрешается сначала в `::1`, поэтому UaExpert и
+ModbusToolkit не подключались к `opc.tcp://localhost:…`. Python-клиент asyncua при этом
+работал: он перебирает адреса и откатывается на IPv4, так что автоматика проблему не
+поймала. С `host=None` asyncio открывает слушатели на всех интерфейсах обоих семейств;
+проверено подключение к `localhost`, `127.0.0.1` и `[::1]`. Интеграционный тест обязан
+проверять подключение по `::1`. Адрес прослушивания задаётся env `OPCUA_BIND_HOST`
+(пусто = все интерфейсы).
+
+`socket_address` — публичный атрибут `Server`, но в документации не описан, а значение
+`None` для хоста не соответствует его аннотации `tuple[str, int]`. Закрываем unit-тестом
+(ADR-000, «Зависимость от приватного API»).
 
 **Не проверено автоматически:** запуск внутри Docker-контейнера (Docker daemon на
 машине не был запущен) и поведение UaExpert/ModbusToolkit.

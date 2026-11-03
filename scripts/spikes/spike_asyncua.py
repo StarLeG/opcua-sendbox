@@ -121,7 +121,9 @@ async def build_server(
     if robust_history:
         server.iserver.history_manager.set_storage(SendBoxHistory())
     server.set_endpoint(f"opc.tcp://{public_host}:{public_port}/electroman/")
-    server.socket_address = ("0.0.0.0", bind_port)
+    # host=None: asyncio слушает все интерфейсы, IPv4 и IPv6. С "0.0.0.0" клиенты,
+    # у которых localhost разрешается в ::1 (UaExpert, ModbusToolkit), не подключаются.
+    server.socket_address = (None, bind_port)  # type: ignore[assignment]
     server.set_match_discovery_client_ip(match_client_ip)
     server.set_security_policy([ua.SecurityPolicyType.NoSecurity])
     server.set_server_name("OPC UA SendBox spike")
