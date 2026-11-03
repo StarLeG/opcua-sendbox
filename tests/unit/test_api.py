@@ -203,4 +203,4 @@ async def test_openapi_documents_error_model(api: Api) -> None:
     schema = (await api.client.get("/api/openapi.json")).json()
     post = schema["paths"]["/api/sessions"]["post"]
     assert {"401", "429", "503"} <= set(post["responses"])
-    assert (await api.client.get("/api/swagger")).status_code == 200
+    assert (await api.client.get("/api/docs")).status_code == 200
