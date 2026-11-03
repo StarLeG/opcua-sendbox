@@ -36,7 +36,7 @@
 
 ## Эпик 2 · Web-слой
 
-- [ ] [P0] **TASK-201 · REST API (`routes.py`, `models.py`) + rate limit**
+- [x] [P0] **TASK-201 · REST API (`routes.py`, `models.py`) + rate limit**
 - [ ] [P0] **TASK-202 · WebSocket (`ws.py`, `state_bus.py`)**
 - [ ] [P0] **TASK-203 · UI: каркас, «Обзор», «Моя сессия», «Документация», Swagger, промо и донат**
 
