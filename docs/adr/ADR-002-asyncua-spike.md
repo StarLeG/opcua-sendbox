@@ -71,6 +71,19 @@ ModbusToolkit не подключались к `opc.tcp://localhost:…`. Python
 (03:40:12–03:44:32, шаг 1 с, без пропусков), заполнены SourceTimestamp и ServerTimestamp,
 статус Good. PASS.
 
+**Запись внешним клиентом — ModbusToolkit 1.58.0, PASS.** Три записи в `Writable`
+(15, 68, 11; `type=Double`, Good), клиент SourceTimestamp не передаёт. HistoryRead
+вернул все три значения с подставленной `SendBoxHistory` меткой, равной ServerTimestamp
+записи (04:03:10.509, 04:03:43.076, 04:04:24.286), сервер работал без ошибок.
+Нюанс: у **текущего значения** узла SourceTimestamp остаётся пустым (снимок узлов
+ModbusToolkit), метку подставляет только история. Для TASK-103: при приёме записи в
+writable-тег сервер сам проставляет SourceTimestamp текущему значению, чтобы клиенты
+видели время изменения.
+
+Попутно: подписка на события у переменной (`addEventMonitoredItem` на `Tags.Writable`)
+возвращает `BadServiceUnsupported` — корректный отказ (у переменных нет EventNotifier),
+ошибка в действиях клиента, сервер не страдает.
+
 ## 3. ExclusiveLimitAlarmType
 
 **Факты.**
