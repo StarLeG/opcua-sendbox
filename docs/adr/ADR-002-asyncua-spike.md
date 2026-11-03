@@ -1,6 +1,6 @@
 # ADR-002 · Спайк asyncua: endpoint, история, алармы, счётчик клиентов
 
-- **Статус:** автоматическая часть принята; ручная проверка (Docker, UaExpert, ModbusToolkit) ждёт подтверждения
+- **Статус:** принято. Открыто: endpoint внутри Docker-контейнера (ждёт запуска Docker, ядро не блокирует); UaExpert A&C View — в приёмке перед деплоем
 - **Дата:** 2026-11-03
 - **Задача:** TASK-002
 - **Версия:** asyncua 2.1.0 (`uv.lock`), Python 3.14, Windows 11
@@ -112,10 +112,47 @@ writable-тег сервер сам проставляет SourceTimestamp те�
   раз в 10 с. При подписке на оба узла одно событие приходит дважды (один и тот же
   EventId, по разу на каждый монитор) — это ожидаемо, клиент сам выбирает источник.
   Отсутствие `LimitState` ModbusToolkit не мешает: его фильтр поле не запрашивает.
-- `LimitState` в событии отсутствует. **Ждёт ручной проверки:** UaExpert (Event View,
-  Alarms & Conditions View); ModbusToolkit — PASS (см. выше). Если UaExpert отображает
-  событие некорректно, задача TASK-103 не начинается, и выбор (OffNormalAlarmType / ручной
-  LimitState / патч) выносится к владельцу.
+- `LimitState` в событии отсутствует.
+
+### 3b. Поведение как у просмотрщика A&C (автотест вместо UaExpert)
+
+Ручной просмотрщик A&C проверить было нечем: у Matrikon OPC UA Explorer клиентский
+«All Alarms and Conditions Facet» отсутствует (руководство, разд. D.7.12), UaExpert на
+машине нет. По решению владельца (2026-11-03) автотест повторяет то, что делает
+просмотрщик, а проверка в UaExpert переносится в приёмку перед деплоем.
+
+Что делает просмотрщик A&C и что проверено: подписка от Server с фильтром по типу аларма
+(поля `AlarmConditionType`, включая `ConditionId` — select clause `AttributeId=NodeId`),
+затем вызов `ConditionRefresh` для получения уже активных условий.
+
+| Проверка | Результат |
+|---|---|
+| 3b-1 активация: ConditionId, Retain, ActiveState/Id, EnabledState/Id, AckedState/Id | PASS |
+| 3b-2 ConditionRefresh при активном аларме возвращает условие | PASS |
+| 3b-3 после сброса (Retain=False) ConditionRefresh условие не возвращает | PASS |
+
+Найдено по дороге (до исправлений были FAIL):
+- **ConditionRefresh в asyncua выключен по умолчанию** — вызов отвечал `BadNothingToDo`.
+  Включается `server.iserver.bind_condition_methods = True` **до** `server.init()`
+  (заодно появляются события RefreshStart/RefreshEnd). Приватный API — в ADR-000.
+- **`ActiveState/Id` и `AckedState/Id` объявлены в `AlarmConditionType`**, фильтр по
+  `ConditionType` их не запрашивает. Это свойство клиента, а не сервера; в тесте подписка
+  идёт с типом `ExclusiveLimitAlarmType`.
+- **SubscriptionService хранит для refresh ссылку на объект события**, а не копию;
+  `emit_event` рассылает снимки (`copy.copy`) и отправляет узлу Server последним, чтобы
+  refresh адресовался подписчикам Server.
+
+**Решения для TASK-103 (`AlarmEvaluator`):**
+- у каждого аларма свой `ConditionId` — `ns=2;s=Alarms.<имя>` (поле `event.NodeId`),
+  `ConditionName` = имя;
+- активен: `Retain=True`, `ActiveState/Id=True`; сброс: `Retain=False`,
+  `ActiveState/Id=False` — событие сброса тоже отправляется;
+- `EnabledState/Id=True`; `AckedState/Id=True` и `ConfirmedState/Id=True` — аларм сразу
+  считается квитированным, потому что Acknowledge/Confirm не поддерживаются (иначе
+  просмотрщик показывал бы вечно неквитированный аларм без способа его квитировать);
+- `bind_condition_methods=True` в каждом воркере;
+- **приёмка перед деплоем:** UaExpert, Alarms & Conditions View на стенде `--serve`
+  (цикл аларма: 10 с активен / 10 с норма) — пункт чек-листа в `docs/DEPLOY.md`.
 
 ## 4. Счётчик клиентов
 

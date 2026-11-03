@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import copy
 import dataclasses
 import logging
 import socket
@@ -94,17 +95,22 @@ async def emit_event(server: Server, evgen: Any, notifiers: list[ua.NodeId], mes
 
     asyncua доставляет событие только мониторам ровно на emitting_node и не
     поднимает его по HasNotifier до узла Server, поэтому рассылаем сами.
+    Каждому нотификатору уходит снимок-копия: SubscriptionService хранит для
+    ConditionRefresh ссылку на последнее отправленное событие условия, и она не
+    должна меняться при следующих изменениях evgen.event. Узел Server идёт
+    последним — refresh адресуется подписчикам Server (так подписываются
+    просмотрщики A&C по умолчанию).
     """
-    await evgen.trigger(message=message)
-    original = evgen.event.emitting_node
+    await evgen.trigger(message=message)  # EventId, Time, Message; уходит на emitting_node
     service = server.iserver.isession.subscription_service
-    try:
-        for node_id in notifiers:
-            if node_id != original:
-                evgen.event.emitting_node = node_id
-                await service.trigger_event(evgen.event)
-    finally:
-        evgen.event.emitting_node = original
+    server_id = ua.NodeId(ua.ObjectIds.Server)
+    ordered = [n for n in notifiers if n != server_id] + [n for n in notifiers if n == server_id]
+    for node_id in ordered:
+        if node_id == evgen.event.emitting_node and node_id != server_id:
+            continue  # trigger() уже доставил
+        snapshot = copy.copy(evgen.event)
+        snapshot.emitting_node = node_id
+        await service.trigger_event(snapshot)
 
 
 async def build_server(
@@ -117,6 +123,10 @@ async def build_server(
 ) -> tuple[Server, dict[str, Any]]:
     """Сервер: слушает 0.0.0.0:bind_port, объявляет public_host:public_port."""
     server = Server()
+    # ConditionRefresh/ConditionRefresh2 и события RefreshStart/End: в asyncua выключены
+    # по умолчанию, включаются только до init(). Без них просмотрщики A&C не получают
+    # список активных алармов при подключении.
+    server.iserver.bind_condition_methods = True
     await server.init()
     if robust_history:
         server.iserver.history_manager.set_storage(SendBoxHistory())
@@ -346,6 +356,102 @@ async def check_alarms() -> None:
                     report(f"3 {label} от {source_label}", bool(got), detail)
 
 
+def set_condition_state(evgen: Any, condition_id: ua.NodeId, *, active: bool) -> None:
+    """Поля условия, которые читают просмотрщики A&C (UaExpert и подобные).
+
+    Retain=True держит активное условие в ConditionRefresh; AckedState/Confirmed —
+    True, потому что Acknowledge не поддерживается: аларм сразу «квитирован».
+    """
+    event = evgen.event
+    event.NodeId = condition_id  # ConditionId (select clause AttributeId=NodeId)
+    event.ConditionName = "SineHigh"
+    event.Retain = active
+    event.EnabledState = ua.LocalizedText("Enabled")
+    setattr(event, "EnabledState/Id", True)
+    event.ActiveState = ua.LocalizedText("Active" if active else "Inactive")
+    setattr(event, "ActiveState/Id", active)
+    event.AckedState = ua.LocalizedText("Acknowledged")
+    setattr(event, "AckedState/Id", True)
+    event.ConfirmedState = ua.LocalizedText("Confirmed")
+    setattr(event, "ConfirmedState/Id", True)
+    event.Severity = 700 if active else 100
+
+
+def field(ev: dict[str, Any], name: str) -> Any:
+    raw = ev.get(name)
+    return raw.Value if isinstance(raw, ua.Variant) else raw
+
+
+async def check_condition_viewer() -> None:
+    print("\n=== 3b. Поведение как у просмотрщика A&C: ConditionId, Retain, ConditionRefresh ===")
+    bind_port = free_port()
+    server, nodes = await build_server("127.0.0.1", bind_port, bind_port, match_client_ip=False)
+    evgen = nodes["evgen"]
+    condition_id = ua.NodeId("Alarms.SineHigh", nodes["idx"])
+    notifiers = [nodes["sendbox"].nodeid, ua.NodeId(ua.ObjectIds.Server)]
+    async with server:
+        url = f"opc.tcp://127.0.0.1:{bind_port}/electroman/"
+        async with Client(url) as client:
+            collector = EventCollector()
+            sub = await client.create_subscription(100, collector)
+            await sub.subscribe_alarms_and_conditions(
+                ua.ObjectIds.Server, ua.ObjectIds.ExclusiveLimitAlarmType
+            )
+            await asyncio.sleep(0.3)
+
+            set_condition_state(evgen, condition_id, active=True)
+            await emit_event(server, evgen, notifiers, "Sine > 80")
+            await asyncio.sleep(0.8)
+            got = [e for e in collector.events if field(e, "Message")]
+            ev = got[-1] if got else {}
+            report(
+                "3b-1 активация: ConditionId/Retain/ActiveState.Id/EnabledState.Id",
+                bool(got)
+                and field(ev, "NodeId") == condition_id
+                and field(ev, "Retain") is True
+                and field(ev, "ActiveState/Id") is True
+                and field(ev, "EnabledState/Id") is True,
+                f"ConditionId={field(ev, 'NodeId')}, Retain={field(ev, 'Retain')}, "
+                f"Active.Id={field(ev, 'ActiveState/Id')}, Enabled.Id={field(ev, 'EnabledState/Id')}, "
+                f"Acked.Id={field(ev, 'AckedState/Id')}, ConditionName={field(ev, 'ConditionName')}",
+            )
+
+            async def refresh() -> list[dict[str, Any]]:
+                collector.events.clear()
+                condition_type = client.get_node(ua.ObjectIds.ConditionType)
+                await condition_type.call_method(
+                    ua.NodeId(ua.ObjectIds.ConditionType_ConditionRefresh),
+                    ua.Variant(sub.subscription_id, ua.VariantType.UInt32),
+                )
+                await asyncio.sleep(0.8)
+                return list(collector.events)
+
+            try:
+                refreshed = await refresh()
+                conditions = [e for e in refreshed if field(e, "NodeId") == condition_id]
+                report(
+                    "3b-2 ConditionRefresh при активном аларме возвращает условие",
+                    len(conditions) == 1,
+                    f"событий в ответе={len(refreshed)}, условий SineHigh={len(conditions)}",
+                )
+            except Exception as exc:  # noqa: BLE001
+                report("3b-2 ConditionRefresh при активном аларме", False, repr(exc))
+
+            set_condition_state(evgen, condition_id, active=False)
+            await emit_event(server, evgen, notifiers, "Sine в норме")
+            await asyncio.sleep(0.5)
+            try:
+                refreshed = await refresh()
+                conditions = [e for e in refreshed if field(e, "NodeId") == condition_id]
+                report(
+                    "3b-3 после сброса (Retain=False) ConditionRefresh условие не возвращает",
+                    not conditions,
+                    f"событий в ответе={len(refreshed)}, условий SineHigh={len(conditions)}",
+                )
+            except Exception as exc:  # noqa: BLE001
+                report("3b-3 ConditionRefresh после сброса", False, repr(exc))
+
+
 # --- 4. client count ------------------------------------------------------
 
 
@@ -375,11 +481,12 @@ async def check_client_count() -> None:
 
 
 async def serve(public_host: str, port: int) -> None:
-    """Ручная проверка: сервер с тегами, историей и событием каждые 10 с."""
+    """Ручная проверка: теги, история и цикл аларма SineHigh (10 с активен / 10 с норма)."""
     server, nodes = await build_server(
         public_host, port, port, match_client_ip=False, robust_history=True
     )
     notifiers = [nodes["sendbox"].nodeid, ua.NodeId(ua.ObjectIds.Server)]
+    condition_id = ua.NodeId("Alarms.SineHigh", nodes["idx"])
     async with server:
         print(f"Сервер: слушает 0.0.0.0:{port}, объявляет opc.tcp://{public_host}:{port}/electroman/")
         n = 0
@@ -387,9 +494,13 @@ async def serve(public_host: str, port: int) -> None:
             n += 1
             await nodes["sine"].write_value(float(n % 100))
             if n % 10 == 0:
-                nodes["evgen"].event.Severity = 700
-                nodes["evgen"].event.ActiveState = ua.LocalizedText("Active")
-                await emit_event(server, nodes["evgen"], notifiers, f"Стенд: событие {n // 10}")
+                # Цикл аларма для просмотрщиков A&C: 10 с активен, 10 с в норме.
+                active = (n // 10) % 2 == 1
+                set_condition_state(nodes["evgen"], condition_id, active=active)
+                text = "активен" if active else "в норме"
+                await emit_event(
+                    server, nodes["evgen"], notifiers, f"Стенд: аларм SineHigh {text} ({n // 10})"
+                )
             print(f"  клиентов: {InternalSession._current_connections}", end="\r")
             await asyncio.sleep(1)
 
@@ -410,6 +521,7 @@ async def main() -> None:
     await check_history(errors, robust=False)
     await check_history(errors, robust=True)
     await check_alarms()
+    await check_condition_viewer()
     await check_client_count()
     print("\n=== Итог ===")
     for name, ok, _ in results:

@@ -20,7 +20,7 @@
 ## Эпик 0 · Фундамент
 
 - [x] [P0] **TASK-001 · git, скаффолд, ADR-000/001, CI**
-- [ ] [P0] **TASK-002 · Спайк asyncua (ADR-002)**
+- [x] [P0] **TASK-002 · Спайк asyncua (ADR-002)** — открыто: Docker (TASK-302), UaExpert A&C (приёмка)
   - endpoint за NAT/Docker: GetEndpoints и CreateSession/ActivateSession с публичным хостом
   - HistoryRead до остановки сервера: внутренняя запись и запись внешним клиентом без SourceTimestamp
   - ExclusiveLimitAlarmType: какие поля доходят до asyncua.Client, ModbusToolkit, UaExpert
