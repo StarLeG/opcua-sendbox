@@ -135,6 +135,10 @@ GENERATOR_FORMS: dict[str, tuple[str, str, list[tuple[str, str, str, Any]]]] = {
         ("values", "Значения через запятую", "Values, comma-separated", "0,25,50,75,100"),
         ("interval_s", "Период шага, с", "Step interval, s", 2),
     ]),
+    "profile": ("профиль по точкам", "profile (points)", [
+        ("points", "Точки «время:значение» через запятую", "Points «time:value», comma-separated", "0:20, 60:80, 180:80, 240:20"),
+        ("repeat", "Повторять по кругу", "Repeat in a loop", False),
+    ]),
     "constant": ("константа", "constant", [("value", "Значение", "Value", 0)]),
     "toggle": ("переключение", "toggle", [("period_s", "Период, с", "Period, s", 2)]),
     "pwm": ("ШИМ", "PWM", [("period_s", "Период, с", "Period, s", 4), ("duty", "Скважность (0..1)", "Duty (0..1)", 0.25)]),
@@ -536,7 +540,7 @@ curl -s -X POST -H "X-API-Key: $KEY" {site_url}/api/sessions'''
 
 <h2>{t(lang, "Что умеет сервер", "What the server does")}</h2>
 <ul>
-  <li>{t(lang, "Теги Double, Float, Int16/32, UInt16/32, Boolean с генераторами: синус, пила, треугольник, меандр, счётчик, шум, блуждание, ступеньки и другие.", "Double, Float, Int16/32, UInt16/32 and Boolean tags with generators: sine, sawtooth, triangle, meander, counter, noise, random walk, steps and more.")}</li>
+  <li>{t(lang, "Теги Double, Float, Int16/32, UInt16/32, Boolean с генераторами: синус, пила, треугольник, меандр, счётчик, шум, блуждание, ступеньки, свой профиль по точкам и другие.", "Double, Float, Int16/32, UInt16/32 and Boolean tags with generators: sine, sawtooth, triangle, meander, counter, noise, random walk, steps, your own point profile and more.")}</li>
   <li>{t(lang, "Запись в теги-константы с флагом «клиент может писать».", "Writes to constant tags marked as writable.")}</li>
   <li>{t(lang, "История HistoryRead Raw: последние {n} значений каждого тега.", "HistoryRead Raw: the last {n} values of every tag.").format(n=config.HISTORY_SIZE)}</li>
   <li>{t(lang, "Алармы ExclusiveLimitAlarmType и AlarmConditionType: порог с гистерезисом, периодический, ручной; ConditionRefresh поддерживается.", "ExclusiveLimitAlarmType and AlarmConditionType alarms: threshold with deadband, periodic, manual; ConditionRefresh is supported.")}</li>

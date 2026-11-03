@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import bisect
 import math
 import random
 from typing import Any, Literal, Protocol, get_args
@@ -16,7 +17,7 @@ from typing import Any, Literal, Protocol, get_args
 #: Числовые генераторы (теги Double/Float/Int*/UInt*).
 NumericKind = Literal[
     "counter", "sawtooth", "triangle", "meander", "sine",
-    "random_uniform", "random_walk", "ramp_oneshot", "countdown", "step",
+    "random_uniform", "random_walk", "ramp_oneshot", "countdown", "step", "profile",
 ]
 #: Битовые генераторы (теги Boolean).
 BitKind = Literal["toggle", "pwm", "random_bit", "counter_bits"]
@@ -375,6 +376,67 @@ class StepGenerator:
         return self._values[n % len(self._values)]
 
 
+class ProfileGenerator:
+    """`profile`: своя кривая по точкам `(t, value)` с линейной интерполяцией.
+
+    `points` — список пар `[t, value]`: времена строго возрастают, `t >= 0`
+    (по умолчанию — линейный рост 0→10 за 10 с). До первой точки — значение
+    первой; после последней — удержание последней (`repeat=False`, по умолчанию)
+    или цикл с периодом `tN - t0` (`repeat=True`). Одна точка — постоянное
+    значение (`is_static`).
+    """
+
+    is_static = False
+
+    def __init__(
+        self,
+        params: dict[str, Any],
+        rng: random.Random,
+    ) -> None:
+        _ = rng
+        raw = params.get("points", [(0, 0), (10, 10)])
+        if not isinstance(raw, (list, tuple)):
+            raise TypeError(f"profile: points должен быть списком пар [t, value], получено: {raw!r}")
+        points: list[tuple[float, float]] = []
+        for item in raw:
+            if not isinstance(item, (list, tuple)) or len(item) != 2:
+                raise TypeError(f"profile: точка должна быть парой [t, value], получено: {item!r}")
+            t_raw, v_raw = item
+            if isinstance(t_raw, bool) or not isinstance(t_raw, (int, float)):
+                raise TypeError(f"profile: время точки должно быть числом, получено: {item!r}")
+            if isinstance(v_raw, bool) or not isinstance(v_raw, (int, float)):
+                raise TypeError(f"profile: значение точки должно быть числом, получено: {item!r}")
+            if t_raw < 0:
+                raise ValueError(f"profile: время точки должно быть >= 0, получено: {t_raw!r}")
+            if points and t_raw <= points[-1][0]:
+                raise ValueError(f"profile: времена точек должны строго возрастать, получено: {t_raw!r}")
+            points.append((float(t_raw), float(v_raw)))
+        if not points:
+            raise ValueError("profile: points не должен быть пустым")
+        self._repeat = _flag(params, "repeat", False)
+        if self._repeat and points[-1][0] == points[0][0]:
+            raise ValueError("profile: repeat требует минимум двух точек с разным временем")
+        self._points = points
+        self._times = [t for t, _ in points]
+        self._values = [v for _, v in points]
+        self._span = points[-1][0] - points[0][0]
+        if len(points) == 1:
+            self.is_static = True
+
+    def update(self, now: float) -> int | float:
+        t0 = self._times[0]
+        if now < t0:
+            return self._values[0]
+        if self._repeat:
+            now = t0 + (now - t0) % self._span
+        elif now >= self._times[-1]:
+            return self._values[-1]
+        i = bisect.bisect_right(self._times, now) - 1
+        t_a, t_b = self._times[i], self._times[i + 1]
+        v_a, v_b = self._values[i], self._values[i + 1]
+        return v_a + (v_b - v_a) * ((now - t_a) / (t_b - t_a))
+
+
 class ToggleGenerator:
     """`toggle`: меандр 50% — True первые `period_s / 2`, затем False (полный период = `period_s`)."""
 
@@ -468,6 +530,7 @@ _FACTORIES: dict[str, type[Any]] = {
     "ramp_oneshot": RampOneshotGenerator,
     "countdown": CountdownGenerator,
     "step": StepGenerator,
+    "profile": ProfileGenerator,
     "toggle": ToggleGenerator,
     "pwm": PwmGenerator,
     "random_bit": RandomBitGenerator,

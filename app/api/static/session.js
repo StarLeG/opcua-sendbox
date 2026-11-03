@@ -232,6 +232,12 @@ function collectParams() {
       params[name] = input.checked;
     } else if (name === "values") {
       params[name] = input.value.split(",").map((s) => Number(s.trim())).filter((n) => !Number.isNaN(n));
+    } else if (name === "points") {
+      // «время:значение, время:value» → [[t, v], ...]; остальное отклонит сервер
+      params[name] = input.value
+        .split(",")
+        .map((s) => s.split(":").map((p) => Number(p.trim())))
+        .filter((pair) => pair.length === 2 && pair.every((n) => !Number.isNaN(n)));
     } else if (name === "then" && !["hold", "loop"].includes(input.value.trim())) {
       params[name] = Number(input.value);
     } else if (name === "then") {

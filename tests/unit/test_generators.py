@@ -406,6 +406,66 @@ def test_step_validation() -> None:
         _gen("step", {"values": [1], "interval_s": -1})
 
 
+# --- profile -----------------------------------------------------------------
+
+
+def test_profile_interpolates_between_points() -> None:
+    gen = _gen("profile", {"points": [[0, 20], [10, 40], [20, 0]]})
+    assert gen.is_static is False
+    assert gen.update(0.0) == 20
+    assert gen.update(5.0) == 30
+    assert gen.update(10.0) == 40
+    assert gen.update(15.0) == 20
+    assert gen.update(20.0) == 0
+
+
+def test_profile_holds_first_and_last_values() -> None:
+    gen = _gen("profile", {"points": [[10, 5], [20, 7]]})
+    assert gen.update(0.0) == 5  # до первой точки — значение первой
+    assert gen.update(25.0) == 7  # после последней — удержание (repeat=False)
+
+
+def test_profile_repeat_loops() -> None:
+    gen = _gen("profile", {"points": [[0, 0], [10, 100]], "repeat": True})
+    assert gen.update(5.0) == 50
+    assert gen.update(10.0) == 0  # конец цикла → начало
+    assert gen.update(15.0) == 50
+    assert gen.update(21.0) == 10
+
+
+def test_profile_repeat_with_offset_start() -> None:
+    gen = _gen("profile", {"points": [[5, 1], [15, 3]], "repeat": True})
+    assert gen.update(5.0) == 1
+    assert gen.update(15.0) == 1  # конец цикла → начало
+    assert gen.update(16.0) == pytest.approx(1.2)  # интерполяция во втором проходе
+
+
+def test_profile_single_point_is_static() -> None:
+    gen = _gen("profile", {"points": [[3, 42]]})
+    assert gen.is_static is True
+    assert gen.update(0.0) == 42
+    assert gen.update(99.0) == 42
+
+
+def test_profile_validation() -> None:
+    with pytest.raises(ValueError, match="points"):
+        _gen("profile", {"points": []})
+    with pytest.raises(TypeError, match="points"):
+        _gen("profile", {"points": 5})
+    with pytest.raises(TypeError, match="парой"):
+        _gen("profile", {"points": [[0, 1, 2]]})
+    with pytest.raises(TypeError, match="время"):
+        _gen("profile", {"points": [["a", 1]]})
+    with pytest.raises(TypeError, match="значение"):
+        _gen("profile", {"points": [[0, True]]})
+    with pytest.raises(ValueError, match=">= 0"):
+        _gen("profile", {"points": [[-1, 0]]})
+    with pytest.raises(ValueError, match="возрастать"):
+        _gen("profile", {"points": [[0, 0], [0, 1]]})
+    with pytest.raises(ValueError, match="repeat"):
+        _gen("profile", {"points": [[0, 0]], "repeat": True})
+
+
 # --- toggle (bool) ------------------------------------------------------------
 
 

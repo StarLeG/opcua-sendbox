@@ -33,7 +33,7 @@
 - [x] [P0] **TASK-103 · `address_space.py`: узлы, обновление, writable, `SendBoxHistory`, `AlarmEvaluator`**
 - [x] [P0] **TASK-104 · `worker.py` + `worker_handle.py`: процесс, IPC, backpressure telemetry**
 - [x] [P0] **TASK-105 · `SessionManager` + `keys.py`: лимиты, reaper, crash, общий сервер**
-- [ ] [P1] **TASK-106 · Генератор `profile` (свой сценарий по точкам)** — вопрос пользователя:
+- [x] [P1] **TASK-106 · Генератор `profile` (свой сценарий по точкам)** — вопрос пользователя:
   готовых кривых (sine/sawtooth/step/ramp…) недостаточно, нужен произвольный сценарий
   «время → значение» (нагрев → плато → остывание). Новый числовой генератор `profile`:
   список точек `(t, value)`, линейная интерполяция между ними, после последней точки —

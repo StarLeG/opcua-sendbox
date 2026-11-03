@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import AsyncIterator
+from typing import Any
 
 import httpx
 import pytest
@@ -115,10 +116,13 @@ def test_generator_form_defaults_are_valid() -> None:
     from app.opcua.tags import TagSpec
 
     for kind, (_ru, _en, params) in GENERATOR_FORMS.items():
-        values = {}
+        values: dict[str, Any] = {}
         for name, _pru, _pen, default in params:
             if name == "values":
                 values[name] = [float(x) for x in str(default).split(",")]
+            elif name == "points":
+                # «время:значение, …» → [[t, v], ...] (как collectParams в session.js)
+                values[name] = [[float(p) for p in item.split(":")] for item in str(default).split(",")]
             else:
                 values[name] = default
         data_type = "Boolean" if kind in BIT_KINDS else "Double"
