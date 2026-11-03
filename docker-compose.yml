@@ -1,0 +1,64 @@
+# Запуск OPC UA SendBox в Docker.
+#
+#   docker compose up -d --build
+#
+# Переменные — таблица «Env» в CLAUDE.md и .env.example; Docker Compose читает
+# файл .env рядом с этим файлом. Внутренние порты фиксированы (общий сервер 4840,
+# сессии 4841–5000, web 8766) и публикуются один к одному: endpoint, который
+# сервер объявляет клиентам, содержит тот же порт.
+#
+# 161 публикация портов — нормально для MVP, но каждая порождает docker-proxy.
+# В продакшене лучше network_mode: host (docs/DEPLOY.md) или "userland-proxy":
+# false в /etc/docker/daemon.json.
+
+services:
+  app:
+    build: .
+    # Тег без версии: версия живёт только в pyproject.toml (SemVer).
+    image: opcua-sendbox
+    container_name: opcua-sendbox
+    restart: unless-stopped
+    ports:
+      - "4840-5000:4840-5000"
+      - "${WEB_PORT:-8766}:8766"
+    environment:
+      OPCUA_PUBLIC_HOST: "${OPCUA_PUBLIC_HOST:-opcua-sendbox.electroman.by}"
+      # Внутри контейнера — только IPv4: Docker на сетях без IPv6 отключает его
+      # в контейнере, и bind на :: упал бы. Снаружи IPv4/IPv6 обслуживает Docker.
+      OPCUA_BIND_HOST: "0.0.0.0"
+      OPCUA_SHARED_PORT: "4840"
+      OPCUA_SESSION_PORT_MIN: "4841"
+      OPCUA_SESSION_PORT_MAX: "5000"
+      SESSIONS_PER_KEY: "${SESSIONS_PER_KEY:-2}"
+      SESSIONS_PER_IP: "${SESSIONS_PER_IP:-4}"
+      SESSIONS_TOTAL: "${SESSIONS_TOTAL:-50}"
+      TAGS_PER_SESSION: "${TAGS_PER_SESSION:-100}"
+      ALARMS_PER_SESSION: "${ALARMS_PER_SESSION:-20}"
+      SESSION_IDLE_TIMEOUT_S: "${SESSION_IDLE_TIMEOUT_S:-1800}"
+      SESSION_MAX_LIFETIME_S: "${SESSION_MAX_LIFETIME_S:-14400}"
+      HISTORY_SIZE: "${HISTORY_SIZE:-1000}"
+      WORKER_START_TIMEOUT_S: "${WORKER_START_TIMEOUT_S:-10}"
+      WS_STATE_HZ: "${WS_STATE_HZ:-2}"
+      WEB_MAX_WRITE_PER_MIN_PER_IP: "${WEB_MAX_WRITE_PER_MIN_PER_IP:-50}"
+      KEYS_PER_HOUR_PER_IP: "${KEYS_PER_HOUR_PER_IP:-10}"
+      WEB_HOST: "0.0.0.0"
+      WEB_PORT: "8766"
+      FORWARDED_ALLOW_IPS: "${FORWARDED_ALLOW_IPS:-127.0.0.1}"
+      LOG_FORMAT: "${LOG_FORMAT:-json}"
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
+    # 50 сессий × ~40 МБ + общий сервер и web — с запасом.
+    mem_limit: "${MEM_LIMIT:-3g}"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8766/healthz', timeout=2)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    # Остановка: lifespan закрывает все сессии; воркерам нужно время.
+    stop_grace_period: 30s

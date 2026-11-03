@@ -1,0 +1,51 @@
+# systemd-юнит OPC UA SendBox (запуск без Docker).
+#
+# Установка (под root):
+#   useradd --system --home /opt/opcua-sendbox --shell /usr/sbin/nologin opcua-sendbox
+#   cp deploy/opcua-sendbox.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now opcua-sendbox
+#
+# Переменные окружения - из /etc/opcua-sendbox/env
+# (скопируйте .env.example и поправьте). Секреты хранить только там.
+# Проверка живости: python3 /opt/opcua-sendbox/scripts/healthcheck.py
+
+[Unit]
+Description=OPC UA SendBox - public OPC UA sandbox (opcua-sendbox.electroman.by)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=opcua-sendbox
+Group=opcua-sendbox
+WorkingDirectory=/opt/opcua-sendbox
+EnvironmentFile=-/etc/opcua-sendbox/env
+ExecStart=/opt/opcua-sendbox/.venv/bin/python -m app
+
+# Падение процесса (exit != 0) - перезапуск через 5 с; штатная остановка
+# (systemctl stop, SIGTERM) перезапуска не вызывает.
+Restart=on-failure
+RestartSec=5s
+# lifespan закрывает все сессии (дочерние процессы) — даём время.
+TimeoutStopSec=30s
+# Воркеры — дочерние процессы сервиса: при остановке systemd добивает весь cgroup.
+KillMode=mixed
+
+# Журнал событий - journald.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=opcua-sendbox
+
+# Hardening: серверу ничего не нужно писать на диск (теги, история и сессии
+# живут в памяти) и расширять привилегии.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

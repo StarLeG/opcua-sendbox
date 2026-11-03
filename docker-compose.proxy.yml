@@ -1,0 +1,33 @@
+# Прокси-режим: web наружу только через nginx, OPC UA — напрямую.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d --build
+#
+# OPC UA (opc.tcp) через nginx не проксируется: это бинарный протокол на
+# 161 порту, а лимиты сессий привязаны к API-ключу и IP из HTTP, не к TCP.
+# FORWARDED_ALLOW_IPS="*" здесь безопасен: web-порт приложения не опубликован,
+# X-Forwarded-For приходит только от nginx внутри сети compose.
+
+services:
+  app:
+    ports: !override
+      - "4840-5000:4840-5000"
+    environment:
+      FORWARDED_ALLOW_IPS: "*"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: opcua-sendbox-nginx
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8766}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
