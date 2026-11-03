@@ -54,3 +54,15 @@ line-length = 100
 [tool.mypy]
 strict = true
 python_version = "3.11"
+
+[[tool.mypy.overrides]]
+# asyncua.ua собирает ObjectIds/AttributeIds/... из подмодулей без __all__.
+module = ["asyncua", "asyncua.*"]
+implicit_reexport = true
+
+[[tool.mypy.overrides]]
+# В тестах asyncua используется напрямую: её аннотации требуют обёрток NewType
+# (NodeId(Int32/String, Int16), DateTime) и делают поля DataValue Optional.
+# Поведение проверяют сами тесты; в app/ строгая проверка без исключений.
+module = ["tests.*"]
+disable_error_code = ["arg-type", "union-attr"]

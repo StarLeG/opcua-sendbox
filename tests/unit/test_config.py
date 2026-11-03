@@ -52,7 +52,7 @@ def test_from_env_rejects_non_integer(monkeypatch: pytest.MonkeyPatch) -> None:
 )
 def test_inconsistent_config_rejected(changes: dict[str, object], message: str) -> None:
     with pytest.raises(ValueError, match=message):
-        replace(Config(), **changes)  # type: ignore[arg-type]
+        replace(Config(), **changes)
 
 
 def test_endpoint_url() -> None:

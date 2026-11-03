@@ -32,9 +32,17 @@ Modbus SendBox (`modbus-test-server`, Python/FastAPI). Стек и соглаш�
 
 ## Зависимость от приватного API asyncua
 
-Список пополняется по итогам спайка ADR-002. Каждый пункт закрыт unit-тестом, который
-падает при изменении API. Обновление asyncua требует прогнать эти тесты и перечитать
-пункты.
+Каждый пункт закрыт тестом, который падает при изменении API. Обновление asyncua
+требует прогнать эти тесты и перечитать пункты (`app/opcua/address_space.py`).
+
+| Что используется | Зачем | Тест |
+|---|---|---|
+| `Server.socket_address = (None, port)` (аннотация — `str`) | bind на все интерфейсы, IPv4 и IPv6, отдельно от endpoint | `test_ipv6_loopback_connects`, `test_get_endpoints_announces_public_host` |
+| `iserver.bind_condition_methods = True` до `init()` | ConditionRefresh для просмотрщиков A&C | `test_limit_alarm_events_and_condition_refresh` |
+| `isession.subscription_service.trigger_event(event)` и поле `event.emitting_node` | рассылка события на папку SendBox и на Server | `test_limit_alarm_events_and_condition_refresh`, `test_alarm_events_reach_sendbox_folder_too` |
+| `InternalSession._current_connections` | `client_count` для idle-таймера | `test_demo_set_builds_and_client_count` |
+| наследование `HistoryDict.save_node_value` | подстановка SourceTimestamp | `tests/unit/test_history.py`, `test_external_write_without_source_timestamp` |
+| `ServerItemCallback.request_params.NodesToWrite` в PreWrite (мутация `DataValue`) | SourceTimestamp у записи клиента | `test_external_write_without_source_timestamp` |
 
 ## Ссылки
 

@@ -37,7 +37,7 @@ from app.opcua.tags import (
     ],
 )
 def test_coerce_value(value: float, data_type: str, expected: object) -> None:
-    result = coerce_value(value, data_type)  # type: ignore[arg-type]
+    result = coerce_value(value, data_type)
     assert result == expected
     assert type(result) is type(expected)
 
@@ -124,7 +124,7 @@ def test_non_limit_alarm_rejects_threshold_fields() -> None:
 )
 def test_alarm_bounds(changes: dict[str, object]) -> None:
     with pytest.raises(ValidationError):
-        AlarmSpec(name="A", kind="periodic", **changes)  # type: ignore[arg-type]
+        AlarmSpec(name="A", kind="periodic", **changes)
 
 
 # --- check_session_content ----------------------------------------------------
