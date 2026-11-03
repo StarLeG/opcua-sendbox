@@ -32,7 +32,7 @@
 - [x] [P0] **TASK-102 · `PortAllocator` + unit-тесты (конкурентность на потоках)**
 - [x] [P0] **TASK-103 · `address_space.py`: узлы, обновление, writable, `SendBoxHistory`, `AlarmEvaluator`**
 - [x] [P0] **TASK-104 · `worker.py` + `worker_handle.py`: процесс, IPC, backpressure telemetry**
-- [ ] [P0] **TASK-105 · `SessionManager` + `keys.py`: лимиты, reaper, crash, общий сервер**
+- [x] [P0] **TASK-105 · `SessionManager` + `keys.py`: лимиты, reaper, crash, общий сервер**
 
 ## Эпик 2 · Web-слой
 

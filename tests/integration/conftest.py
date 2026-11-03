@@ -1,7 +1,8 @@
 """Фикстуры интеграционных тестов: порты тестового диапазона, сервер в процессе теста.
 
-Порты выдаёт PortAllocator из 15000–15100: диапазон не пересекается с продовым
-4840–5000 и с LDS на 4840, занятые порты пропускаются пробой bind.
+Порты выдаёт PortAllocator из 15000–15058: диапазон не пересекается с продовым
+4840–5000 и с LDS на 4840 (15059–15100 — тестам менеджера сессий), занятые
+порты пропускаются пробой bind.
 """
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ from app.opcua.address_space import AddressSpace, create_server
 from app.opcua.port_allocator import PortAllocator
 
 TEST_PORT_MIN = 15000
-TEST_PORT_MAX = 15100
+TEST_PORT_MAX = 15058  # 15059 — общий сервер, 15060–15100 — сессии менеджера
 PUBLIC_HOST = "opcua-sendbox.test"
 
 _allocator = PortAllocator(TEST_PORT_MIN, TEST_PORT_MAX)
