@@ -14,6 +14,7 @@
 """
 from __future__ import annotations
 
+import os
 import socket
 import threading
 from collections.abc import Callable
@@ -33,6 +34,11 @@ def probe_bind(port: int, host: str | None = None) -> bool:
         families.append((socket.AF_INET6, host or "::"))
     for family, address in families:
         with socket.socket(family, socket.SOCK_STREAM) as sock:
+            if os.name != "nt":
+                # Как asyncio.create_server на POSIX: иначе соединения в TIME_WAIT
+                # после отключения клиентов делали бы свободный порт «занятым» ~60 с.
+                # На Windows SO_REUSEADDR означает перехват чужого порта — не ставим.
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             if family == socket.AF_INET6:
                 sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
             try:
