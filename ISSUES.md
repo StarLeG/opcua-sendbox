@@ -39,9 +39,13 @@
 - [x] [P0] **TASK-201 · REST API (`routes.py`, `models.py`) + rate limit**
 - [x] [P0] **TASK-202 · WebSocket (`ws.py`, `state_bus.py`)**
 - [x] [P0] **TASK-203 · UI: каркас, «Обзор», «Моя сессия», «Документация», Swagger, промо и донат**
+- [ ] [P2] **TASK-204 · Версионирование API и capabilities-эндпоинт** — требование плана
+  ModbusToolkit (`Doc/plans/2026-11-03-opcua-sendbox-integration.md`): `/api/v1/...` и
+  `GET /api/capabilities` (версия сервиса, поддерживаемые возможности), чтобы приложение
+  деградировало честно. Контракт согласовать до этапа 2 плана ModbusToolkit.
 
 ## Эпик 3 · Эксплуатация
 
 - [x] [P1] **TASK-301 · Логи `LOG_FORMAT`, `/metrics`, `/healthz`**
-- [x] [P1] **TASK-302 · Docker/compose, nginx, systemd, `docs/DEPLOY.md`** — образ собран, endpoint в контейнере проверен (ADR-002)
+- [x] [P1] **TASK-302 · Docker/compose, nginx, systemd, `docs/DEPLOY.md`** — образ собран, endpoint в контейнере проверен (ADR-002); прод развёрнут 2026-11-03 (opcua-sendbox.electroman.by), GetEndpoints отдаёт публичный URL
 - [x] [P1] **TASK-303 · README, обновление CLAUDE.md**
