@@ -80,6 +80,20 @@ def create_app(
         services.stats.hit(response.status_code)
         return response
 
+    @app.middleware("http")
+    async def _revalidate_static(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """Статика UI — всегда сверять с сервером (TASK-208).
+
+        Без Cache-Control браузер кэширует CSS/JS по эвристике надолго и после
+        выкладки продолжает показывать старый интерфейс. `no-cache` означает
+        «кэшируй, но сверяй»: файл уходит с ETag/Last-Modified, неизменённый
+        возвращается как 304 без тела.
+        """
+        response = await call_next(request)
+        if request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
     # Двойной префикс: /api/v1 — канонический контракт в OpenAPI, /api — совместимый
     # алиас для UI, README и старых скриптов (ADR-003).
     app.include_router(router, prefix="/api/v1")

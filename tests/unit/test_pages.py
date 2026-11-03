@@ -167,7 +167,11 @@ async def test_docs_has_examples_and_limits(client: httpx.AsyncClient) -> None:
     "path", ["/static/app.css", "/static/common.js", "/static/session.js", "/static/overview.js", "/static/i18n.js"]
 )
 async def test_static_served(client: httpx.AsyncClient, path: str) -> None:
-    assert (await client.get(path)).status_code == 200
+    response = await client.get(path)
+    assert response.status_code == 200
+    # TASK-208: статика сверяется с сервером, а не кэшируется по эвристике —
+    # иначе после выкладки пользователи получают старый JS/CSS.
+    assert response.headers["cache-control"] == "no-cache"
 
 
 async def test_list_params_are_full_width(client: httpx.AsyncClient) -> None:
