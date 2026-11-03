@@ -65,6 +65,12 @@ ModbusToolkit не подключались к `opc.tcp://localhost:…`. Python
 записи, так как `force_server_timestamp=True`), иначе текущее UTC. Метку предыдущего
 значения не копирует. Подключается через `server.iserver.history_manager.set_storage(...)`.
 
+**Ручная проверка ModbusToolkit 1.58.0** (2026-11-03, стенд `--serve` на :4850).
+Подключение без шифрования, дерево `Objects/SendBox/{Sine, Writable}`, мониторинг и тренд
+`Sine` работают. Страница «История» → экспорт CSV: 260 значений `Sine` подряд
+(03:40:12–03:44:32, шаг 1 с, без пропусков), заполнены SourceTimestamp и ServerTimestamp,
+статус Good. PASS.
+
 ## 3. ExclusiveLimitAlarmType
 
 **Факты.**
