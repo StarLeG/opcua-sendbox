@@ -62,6 +62,27 @@ asyncio.run(main())
 - **REST API и метрики.** Swagger на `/api/docs`, Prometheus на `/metrics`, healthcheck
   на `/healthz`.
 
+## Как это выглядит
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/overview.png" alt="Обзор: общий демо-сервер, теги и алармы"></td>
+    <td width="50%"><img src="docs/images/session.png" alt="Моя сессия: endpoint, теги и генераторы"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Обзор: общий демо-сервер, теги и алармы</sub></td>
+    <td align="center"><sub>Личный сервер: endpoint, теги и генераторы</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/docs.png" alt="Документация: подключение из UaExpert и ModbusToolkit"></td>
+    <td width="50%"><img src="docs/images/api.png" alt="REST API в Swagger"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Документация: подключение из UaExpert и ModbusToolkit</sub></td>
+    <td align="center"><sub>REST API в оформлении сайта</sub></td>
+  </tr>
+</table>
+
 ## Личный сервер через API
 
 ```bash
