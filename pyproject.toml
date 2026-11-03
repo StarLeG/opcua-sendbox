@@ -1,6 +1,6 @@
 [project]
 name = "opcua-sendbox"
-version = "0.1.0"
+version = "0.1.1"
 description = "OPC UA SendBox - публичная песочница OPC UA серверов (opcua-sendbox.electroman.by)"
 requires-python = ">=3.11"
 authors = [{ name = "Олег Старинский (StarLeG)" }]
