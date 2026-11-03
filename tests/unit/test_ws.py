@@ -12,6 +12,7 @@ from app.api import ws as ws_module
 from app.api.app import create_app
 from app.api.rate_limit import IpRateLimiter
 from app.api.services import AppServices
+from app.api.stats import RequestStats
 from tests.fakes import Env
 
 
@@ -36,7 +37,9 @@ class Ctx:
 @pytest.fixture
 def ctx() -> Iterator[Ctx]:
     env = Env()
-    services = AppServices(config=env.config, manager=env.manager, action_limiter=IpRateLimiter(1000))
+    services = AppServices(
+        config=env.config, manager=env.manager, action_limiter=IpRateLimiter(1000), stats=RequestStats()
+    )
     app = create_app(services=services, start_manager=False)
     with TestClient(app) as client:
         yield Ctx(env, client)
@@ -134,4 +137,30 @@ def test_shared_stream_without_key(ctx: Ctx) -> None:
         ctx.client.portal.call(
             ctx.env.manager._on_shared_message, {"type": "tag_values", "values": {"Sine": 1.0}}
         )
-        assert ws.receive_json()["values"] == {"Sine": 1.0}
+        skipped = []
+        while True:
+            frame = ws.receive_json()
+            if frame["type"] == "tag_values":
+                assert frame["values"] == {"Sine": 1.0}
+                break
+            skipped.append(frame["type"])
+        assert set(skipped) <= {"counters"}  # между кадрами уходят счётчики (TASK-205)
+
+
+def test_shared_stream_pushes_counters(ctx: Ctx) -> None:
+    """Кадр `counters` уходит сразу после hello и не зависит от HTTP-опроса."""
+    with ctx.client.websocket_connect("/ws/shared") as ws:
+        assert ws.receive_json()["type"] == "hello"
+        counters = ws.receive_json()
+        assert counters["type"] == "counters"
+        assert set(counters) == {
+            "type",
+            "clients",
+            "requests_per_s",
+            "errors_per_s",
+            "requests_total",
+            "errors_total",
+            "uptime_s",
+        }
+        assert counters["clients"] == 0
+        assert counters["uptime_s"] >= 0

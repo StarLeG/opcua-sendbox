@@ -6,7 +6,8 @@
 Первый кадр — `{"type": "hello", ...}` с описанием сессии/сервера; дальше —
 сообщения воркера как есть: `tag_values` (снимок не чаще WS_STATE_HZ), `alarm`,
 `write`, `client_count`, `log`; при закрытии сессии — `closed` или `crashed`, после
-чего сервер закрывает WebSocket (1000 / 1011).
+чего сервер закрывает WebSocket (1000 / 1011). В `/ws/shared` дополнительно уходит
+кадр `counters` (счётчики сервера для UI, TASK-205) раз в COUNTERS_INTERVAL_S.
 
 Backpressure: у каждого клиента ограниченная очередь; продюсер не ждёт клиента
 (`put_nowait`). Переполнение = клиент не успевает → отключение кодом 1013, остальные
@@ -25,6 +26,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.api.routes import session_out
 from app.api.services import AppServices
+from app.api.stats import counters_payload
 from app.opcua.session_manager import SessionNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -42,6 +44,9 @@ WS_CLOSE_SLOW = 1013  # клиент не успевает
 
 #: Сообщения воркера, которые клиенту не нужны (внутренние).
 _INTERNAL = frozenset({"reply", "ready", "stats", "exited", "error"})
+
+#: Период отправки кадра `counters` в `/ws/shared`, с.
+COUNTERS_INTERVAL_S = 2.0
 
 
 class WsChannel:
@@ -157,7 +162,19 @@ async def ws_shared(ws: WebSocket) -> None:
         }
     )
     shared.listeners.add(channel.offer)
+
+    async def _push_counters() -> None:
+        """Кадр `counters` раз в COUNTERS_INTERVAL_S: счётчики UI не считаются по HTTP."""
+        while True:
+            payload = counters_payload(services.manager, services.stats).model_dump()
+            channel.offer({"type": "counters", **payload})
+            await asyncio.sleep(COUNTERS_INTERVAL_S)
+
+    counters_task = asyncio.create_task(_push_counters())
     try:
         await channel.run()
     finally:
+        counters_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await counters_task
         shared.listeners.discard(channel.offer)

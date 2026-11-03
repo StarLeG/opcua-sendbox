@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+from app.api.stats import RequestStats
 from app.opcua.session_manager import SessionManager
 
 #: Медиа-тип по спецификации Prometheus.
@@ -18,8 +19,8 @@ def _label(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
 
 
-def render_prometheus(manager: SessionManager) -> str:
-    """Собрать текст экспозиции из текущего состояния менеджера."""
+def render_prometheus(manager: SessionManager, stats: RequestStats) -> str:
+    """Собрать текст экспозиции из текущего состояния менеджера и счётчиков HTTP."""
     lines: list[str] = []
 
     def metric(name: str, kind: str, help_text: str, samples: list[tuple[str, float]]) -> None:
@@ -65,6 +66,13 @@ def render_prometheus(manager: SessionManager) -> str:
             for s in sessions
             if s.handle is not None
         ],
+    )
+    metric("sendbox_http_requests_total", "counter", "HTTP-ответы web-процесса с запуска.", [("", stats.total)])
+    metric(
+        "sendbox_http_errors_total",
+        "counter",
+        "HTTP-ответы со статусом 400 и выше с запуска.",
+        [("", stats.errors)],
     )
     metric("sendbox_uptime_seconds", "gauge", "Время работы сервиса, с.", [("", round(manager.uptime(), 1))])
     return "\n".join(lines) + "\n"

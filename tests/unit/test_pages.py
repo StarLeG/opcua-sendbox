@@ -12,6 +12,7 @@ from app.api.app import create_app
 from app.api.pages import GENERATOR_FORMS
 from app.api.rate_limit import IpRateLimiter
 from app.api.services import AppServices
+from app.api.stats import RequestStats
 from app.opcua.generators import BIT_KINDS, NUMERIC_KINDS
 from tests.fakes import Env
 
@@ -21,7 +22,9 @@ PAGES = ["/", "/session", "/session/abc123", "/docs", "/api/docs"]
 @pytest.fixture
 async def client() -> AsyncIterator[httpx.AsyncClient]:
     env = Env()
-    services = AppServices(config=env.config, manager=env.manager, action_limiter=IpRateLimiter(100))
+    services = AppServices(
+        config=env.config, manager=env.manager, action_limiter=IpRateLimiter(100), stats=RequestStats()
+    )
     app = create_app(services=services, start_manager=False)
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as c:
         yield c
@@ -67,6 +70,32 @@ async def test_index_shows_shared_endpoint(client: httpx.AsyncClient) -> None:
     assert "opc.tcp://opcua-sendbox.electroman.by:100/electroman/" in html
     assert 'data-copy-text="opc.tcp://opcua-sendbox.electroman.by:100/electroman/"' in html
     assert "/static/overview.js" in html
+
+
+@pytest.mark.parametrize(
+    ("lang", "title", "rows"),
+    [
+        (
+            "ru",
+            "Счётчики сервера",
+            ["Активные соединения", "Запросы/с", "Ошибки/с", "Всего запросов", "Всего ошибок", "Uptime"],
+        ),
+        (
+            "en",
+            "Server counters",
+            ["Active connections", "Requests/s", "Errors/s", "Total requests", "Total errors", "Uptime"],
+        ),
+    ],
+)
+async def test_index_has_server_counters(
+    client: httpx.AsyncClient, lang: str, title: str, rows: list[str]
+) -> None:
+    html = (await client.get("/", params={"lang": lang})).text
+    assert title in html
+    for row in rows:
+        assert row in html
+    for cell in ("cnt-clients", "cnt-rps", "cnt-eps", "cnt-total", "cnt-errors", "cnt-uptime"):
+        assert f'id="{cell}"' in html
 
 
 async def test_session_page_embeds_generator_config(client: httpx.AsyncClient) -> None:

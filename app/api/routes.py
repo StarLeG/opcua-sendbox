@@ -31,9 +31,11 @@ from app.api.models import (
     SessionDetailOut,
     SessionOut,
     SharedOut,
+    StatsOut,
 )
 from app.api.prometheus import MEDIA_TYPE, render_prometheus
 from app.api.services import AppServices
+from app.api.stats import counters_payload
 from app.opcua.keys import KeyInfo, KeyRateLimitError
 from app.opcua.session_manager import (
     NoCapacityError,
@@ -299,6 +301,12 @@ def shared_info(services: ServicesDep) -> SharedOut:
     return SharedOut(endpoint_url=shared.endpoint_url, status=shared.status, restarts=shared.restarts)
 
 
+@router.get("/stats", response_model=StatsOut, tags=["Служебное"])
+def stats(services: ServicesDep) -> StatsOut:
+    """Счётчики сервера: OPC UA клиенты, HTTP-запросы и ошибки, uptime."""
+    return counters_payload(services.manager, services.stats)
+
+
 @health_router.get("/healthz", response_model=HealthOut, tags=["Служебное"])
 def healthz(services: ServicesDep, response: Response) -> HealthOut:
     """Здоровье: 200, если общий сервер работает, иначе 503."""
@@ -317,5 +325,7 @@ def healthz(services: ServicesDep, response: Response) -> HealthOut:
 
 @health_router.get("/metrics", response_class=PlainTextResponse, tags=["Служебное"])
 def metrics(services: ServicesDep) -> PlainTextResponse:
-    """Метрики в формате Prometheus: сессии, порты, клиенты, общий сервер, дропы телеметрии."""
-    return PlainTextResponse(render_prometheus(services.manager), media_type=MEDIA_TYPE)
+    """Метрики Prometheus: сессии, порты, клиенты, общий сервер, дропы телеметрии, HTTP."""
+    return PlainTextResponse(
+        render_prometheus(services.manager, services.stats), media_type=MEDIA_TYPE
+    )

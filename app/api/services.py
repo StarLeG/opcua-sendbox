@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.api.rate_limit import IpRateLimiter
+from app.api.stats import RequestStats
 from app.config import Config
 from app.opcua.session_manager import SessionManager
 
@@ -13,6 +14,7 @@ class AppServices:
     config: Config
     manager: SessionManager
     action_limiter: IpRateLimiter
+    stats: RequestStats
 
 
 def build_services(config: Config | None = None, manager: SessionManager | None = None) -> AppServices:
@@ -21,4 +23,5 @@ def build_services(config: Config | None = None, manager: SessionManager | None 
         config=cfg,
         manager=manager if manager is not None else SessionManager(cfg),
         action_limiter=IpRateLimiter(cfg.WEB_MAX_WRITE_PER_MIN_PER_IP),
+        stats=RequestStats(),
     )

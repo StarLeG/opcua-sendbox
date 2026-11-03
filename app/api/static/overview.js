@@ -49,6 +49,24 @@ function renderAlarms(alarms) {
     .join("");
 }
 
+// «48 ч 31 мин 16 с» — формат счётчика uptime (TASK-205).
+function formatUptime(seconds) {
+  const total = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return `${h} ${tr("ч")} ${m} ${tr("мин")} ${s} ${tr("с")}`;
+}
+
+function renderCounters(f) {
+  el("cnt-clients").textContent = String(f.clients);
+  el("cnt-rps").textContent = f.requests_per_s.toFixed(2);
+  el("cnt-eps").textContent = f.errors_per_s.toFixed(2);
+  el("cnt-total").textContent = String(f.requests_total);
+  el("cnt-errors").textContent = String(f.errors_total);
+  el("cnt-uptime").textContent = formatUptime(f.uptime_s);
+}
+
 connectWs("/ws/shared", (frame) => {
   if (frame.type === "hello") setStatus(frame.shared.status);
   if (frame.type === "tag_values") {
@@ -56,6 +74,7 @@ connectWs("/ws/shared", (frame) => {
     renderValues(frame.values);
     renderAlarms(frame.alarms);
   }
+  if (frame.type === "counters") renderCounters(frame);
   if (frame.type === "exited") setStatus("restarting");
 });
 

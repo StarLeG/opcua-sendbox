@@ -386,6 +386,23 @@ def _index_body(config: Config, lang: Lang) -> str:
   </div>
   {_sibling_block(lang)}
 </div>
+
+<h2>{t(lang, "Счётчики сервера", "Server counters")}</h2>
+<div class="panel">
+  <table class="values"><tbody>
+    <tr><td>{t(lang, "Активные соединения", "Active connections")}</td><td id="cnt-clients" class="mono">…</td></tr>
+    <tr><td>{t(lang, "Запросы/с", "Requests/s")}</td><td id="cnt-rps" class="mono">…</td></tr>
+    <tr><td>{t(lang, "Ошибки/с", "Errors/s")}</td><td id="cnt-eps" class="mono">…</td></tr>
+    <tr><td>{t(lang, "Всего запросов", "Total requests")}</td><td id="cnt-total" class="mono">…</td></tr>
+    <tr><td>{t(lang, "Всего ошибок", "Total errors")}</td><td id="cnt-errors" class="mono">…</td></tr>
+    <tr><td>Uptime</td><td id="cnt-uptime" class="mono">…</td></tr>
+  </tbody></table>
+  <p class="note">{t(lang,
+      "Запросы считаются по HTTP API, ошибкой считается ответ со статусом 400 и выше. "
+      "Активные соединения — OPC UA клиенты общего сервера и личных сессий.",
+      "Requests are counted by the HTTP API; a response with status 400 and above counts as an error. "
+      "Active connections are OPC UA clients of the shared server and personal sessions.")}</p>
+</div>
 {_promo_block(lang)}
 <script type="module" src="/static/overview.js"></script>
 """

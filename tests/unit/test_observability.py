@@ -17,6 +17,7 @@ from app.api.app import create_app
 from app.api.prometheus import MEDIA_TYPE, render_prometheus
 from app.api.rate_limit import IpRateLimiter
 from app.api.services import AppServices
+from app.api.stats import RequestStats
 from app.config import Config
 from app.opcua.session_manager import NoCapacityError
 from tests.fakes import Env
@@ -45,7 +46,8 @@ def sample(text: str, name: str, labels: str = "") -> float:
 async def test_metrics_reflect_manager_state() -> None:
     env = Env()
     m = env.manager
-    text = render_prometheus(m)
+    stats = RequestStats()
+    text = render_prometheus(m, stats)
     assert sample(text, "sendbox_sessions_active") == 0
     assert sample(text, "sendbox_ports_free") == 20
     assert sample(text, "sendbox_shared_up") == 0
@@ -56,37 +58,45 @@ async def test_metrics_reflect_manager_state() -> None:
     env.fail = True
     with pytest.raises(NoCapacityError):
         await m.create("k2", "ip")
-    text = render_prometheus(m)
+    stats.hit(200)
+    stats.hit(200)
+    stats.hit(404)
+    text = render_prometheus(m, stats)
     assert sample(text, "sendbox_sessions_active") == 1
     assert sample(text, "sendbox_sessions_created_total") == 1
     assert sample(text, "sendbox_session_start_failures_total") == 1
     assert sample(text, "sendbox_ports_free") == 19
     assert sample(text, "sendbox_opcua_clients", '{server="sessions"}') == 2
     assert sample(text, "sendbox_ipc_telemetry_dropped_total", f'{{session="{session.id}"}}') == 7
+    assert sample(text, "sendbox_http_requests_total") == 3
+    assert sample(text, "sendbox_http_errors_total") == 1
 
     await m.delete(session.id, "k")
-    text = render_prometheus(m)
+    text = render_prometheus(m, stats)
     assert sample(text, "sendbox_sessions_closed_total", '{reason="deleted"}') == 1
     assert sample(text, "sendbox_sessions_closed_total", '{reason="idle"}') == 0
 
 
 async def test_metrics_format_has_help_and_type_for_every_metric() -> None:
-    text = render_prometheus(Env().manager)
+    text = render_prometheus(Env().manager, RequestStats())
     names = set(re.findall(r"^# TYPE (\S+) (?:gauge|counter)$", text, re.MULTILINE))
     helps = set(re.findall(r"^# HELP (\S+) ", text, re.MULTILINE))
-    assert names == helps and len(names) == 11
+    assert names == helps and len(names) == 13
     assert all(n.endswith("_total") for n in names if f"# TYPE {n} counter" in text)
 
 
 async def test_metrics_endpoint() -> None:
     env = Env()
-    services = AppServices(config=env.config, manager=env.manager, action_limiter=IpRateLimiter(10))
+    services = AppServices(
+        config=env.config, manager=env.manager, action_limiter=IpRateLimiter(10), stats=RequestStats()
+    )
     app = create_app(services=services, start_manager=False)
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as client:
         response = await client.get("/metrics")
     assert response.status_code == 200
     assert response.headers["content-type"] == MEDIA_TYPE
     assert "sendbox_uptime_seconds" in response.text
+    assert "sendbox_http_requests_total" in response.text
 
 
 def test_env_example_matches_config() -> None:

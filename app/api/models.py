@@ -66,3 +66,14 @@ class HealthOut(BaseModel):
     shared: str
     sessions: int
     ports_free: int
+
+
+class StatsOut(BaseModel):
+    """Счётчики сервера для UI (TASK-205)."""
+
+    clients: int = Field(description="OPC UA клиенты общего сервера и личных сессий")
+    requests_per_s: float = Field(description="HTTP-запросы в секунду за окно 5 с")
+    errors_per_s: float = Field(description="Ответы со статусом 400+ в секунду за окно 5 с")
+    requests_total: int = Field(description="Всего HTTP-запросов с запуска")
+    errors_total: int = Field(description="Всего ответов со статусом 400+ с запуска")
+    uptime_s: float = Field(description="Время работы сервиса, с")

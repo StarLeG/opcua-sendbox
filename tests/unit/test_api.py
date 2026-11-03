@@ -10,6 +10,7 @@ import pytest
 from app.api.app import create_app
 from app.api.rate_limit import IpRateLimiter
 from app.api.services import AppServices
+from app.api.stats import RequestStats
 from tests.fakes import Env
 
 
@@ -31,7 +32,10 @@ class Api:
 
 async def make_api(env: Env, action_limit: int = 1000) -> AsyncIterator[Api]:
     services = AppServices(
-        config=env.config, manager=env.manager, action_limiter=IpRateLimiter(action_limit)
+        config=env.config,
+        manager=env.manager,
+        action_limiter=IpRateLimiter(action_limit),
+        stats=RequestStats(),
     )
     app = create_app(services=services, start_manager=False)
     transport = httpx.ASGITransport(app=app)
@@ -197,6 +201,17 @@ async def test_shared_and_healthz(api: Api) -> None:
     health = await api.client.get("/healthz")
     assert health.status_code == 200
     assert health.json()["status"] == "ok" and health.json()["ports_free"] == 20
+
+
+async def test_stats_counts_http_requests(api: Api) -> None:
+    await api.key()  # 201
+    assert (await api.client.get("/api/nope")).status_code == 404
+    body = (await api.client.get("/api/stats")).json()
+    assert body["requests_total"] == 2  # ключ и 404; сам запрос /api/stats ещё не учтён
+    assert body["errors_total"] == 1  # ошибкой считается статус 400 и выше
+    assert body["clients"] == 0
+    assert body["uptime_s"] >= 0
+    assert body["requests_per_s"] >= 0 and body["errors_per_s"] >= 0
 
 
 async def test_openapi_documents_error_model(api: Api) -> None:
