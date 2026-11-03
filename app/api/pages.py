@@ -420,9 +420,11 @@ def _session_body(config: Config, lang: Lang, session_id: str | None) -> str:
 <div id="session-missing" hidden>
   <p id="missing-text">{t(lang, "Сессия не найдена: она закрыта или создана в другом браузере.", "Session not found: it is closed or was created in another browser.")}</p>
   <button type="button" id="create-session" class="btn">{t(lang, "Создать личный сервер", "Create personal server")}</button>
+  <button type="button" class="btn ghost" data-import-config>{t(lang, "Загрузить JSON", "Upload JSON")}</button>
   <p id="create-status" class="form-status"></p>
   <ul id="my-sessions" class="note"></ul>
 </div>
+<input type="file" id="config-file" accept=".json,application/json" hidden>
 <div id="session-view" hidden>
   <div class="endpoint">
     <code id="endpoint"></code>
@@ -434,6 +436,8 @@ def _session_body(config: Config, lang: Lang, session_id: str | None) -> str:
     <span>{t(lang, "Закроется по простою", "Idle close")}: <b id="idle-left">—</b></span>
     <span>{t(lang, "Закроется в любом случае", "Hard close")}: <b id="life-left">—</b></span>
     <button type="button" id="delete-session" class="danger">{t(lang, "Закрыть сессию", "Close session")}</button>
+    <button type="button" class="ghost" data-export-config>{t(lang, "Скачать JSON", "Download JSON")}</button>
+    <button type="button" class="ghost" data-import-config>{t(lang, "Загрузить JSON", "Upload JSON")}</button>
   </div>
   {_support_block(lang)}
   <div class="panel">

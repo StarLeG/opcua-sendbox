@@ -129,6 +129,25 @@ def test_generator_form_defaults_are_valid() -> None:
         TagSpec(name="T", kind=kind, data_type=data_type, params=values)
 
 
+@pytest.mark.parametrize(
+    ("lang", "labels"),
+    [
+        ("ru", ("Скачать JSON", "Загрузить JSON")),
+        ("en", ("Download JSON", "Upload JSON")),
+    ],
+)
+async def test_session_page_has_config_export_import(
+    client: httpx.AsyncClient, lang: str, labels: tuple[str, str]
+) -> None:
+    html = (await client.get("/session/abc123", params={"lang": lang})).text
+    assert "data-export-config" in html
+    # кнопка «Загрузить JSON» — и в рабочей области, и в блоке «сессия закрыта»
+    assert html.count("data-import-config") == 2
+    assert 'id="config-file"' in html
+    for label in labels:
+        assert label in html
+
+
 async def test_session_id_is_escaped(client: httpx.AsyncClient) -> None:
     html = (await client.get("/session/%3C%2Fscript%3E")).text
     assert "window.SESSION_ID = \"</script>\"" not in html

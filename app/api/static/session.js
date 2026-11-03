@@ -342,9 +342,72 @@ async function deleteSession() {
   }
 }
 
+// --- экспорт/импорт конфигурации ----------------------------------------------------
+
+// Файл — тело POST /api/sessions: {tags: [...], alarms: [...]}.
+function exportConfig() {
+  const payload = { tags, alarms };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const name = `opcua-sendbox-${SID || "config"}.json`;
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = name;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  log(tr("Конфигурация сохранена: {name}", { name }), "info");
+}
+
+function importStatus(text, ok) {
+  const missing = el("session-missing");
+  const status = el("create-status");
+  if (status && missing && !missing.hidden) {
+    status.className = "form-status " + (ok ? "ok" : "err");
+    status.textContent = text;
+  }
+  log(text, ok ? "info" : "alarm");
+}
+
+async function importConfig(file) {
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch {
+    importStatus(tr("Файл не является JSON"), false);
+    return;
+  }
+  const hasTags = data !== null && typeof data === "object" && Array.isArray(data.tags);
+  const hasAlarms = data !== null && typeof data === "object" && Array.isArray(data.alarms);
+  if (!hasTags && !hasAlarms) {
+    importStatus(tr("В файле нет списков tags или alarms"), false);
+    return;
+  }
+  const body = { tags: hasTags ? data.tags : [], alarms: hasAlarms ? data.alarms : [] };
+  try {
+    const created = await apiJson("POST", "/api/sessions", body);
+    location.href = created.web_ui_url + location.search;
+  } catch (error) {
+    importStatus(error.message, false);
+  }
+}
+
+function bindConfigButtons() {
+  const fileInput = el("config-file");
+  for (const button of document.querySelectorAll("[data-export-config]")) {
+    button.addEventListener("click", exportConfig);
+  }
+  for (const button of document.querySelectorAll("[data-import-config]")) {
+    button.addEventListener("click", () => fileInput.click());
+  }
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files.length) importConfig(fileInput.files[0]);
+    fileInput.value = "";
+  });
+}
+
 // --- старт ----------------------------------------------------------------------------
 
 async function start() {
+  bindConfigButtons();
   if (!SID) {
     // /session без id: первая сессия ключа или кнопка «Создать».
     if (currentKey()) {
