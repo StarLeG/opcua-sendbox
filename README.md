@@ -96,6 +96,10 @@ curl -s -X POST -H "X-API-Key: $KEY" https://opcua-sendbox.electroman.by/api/ses
 `POST /api/sessions/{id}/tags`, `POST /api/sessions/{id}/alarms`,
 `POST /api/sessions/{id}/alarms/{name}/trigger`.
 
+Контракт версионирован: канонические пути `/api/v1/...`, неверсионированные
+`/api/...` работают как совместимый алиас. Версия сервиса, поддерживаемые
+возможности и лимиты — в `GET /api/capabilities` (ADR-003).
+
 ## Ограничения
 
 - Соединение без шифрования (`SecurityPolicy=None`), вход анонимный. Basic256Sha256 и

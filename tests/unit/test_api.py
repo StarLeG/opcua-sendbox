@@ -216,6 +216,31 @@ async def test_stats_counts_http_requests(api: Api) -> None:
 
 async def test_openapi_documents_error_model(api: Api) -> None:
     schema = (await api.client.get("/api/openapi.json")).json()
-    post = schema["paths"]["/api/sessions"]["post"]
+    post = schema["paths"]["/api/v1/sessions"]["post"]
     assert {"401", "429", "503"} <= set(post["responses"])
+    assert "/api/sessions" not in schema["paths"]  # алиас /api/... скрыт из схемы (ADR-003)
     assert (await api.client.get("/api/docs")).status_code == 200
+
+
+async def test_capabilities_and_api_alias(api: Api) -> None:
+    """Контракт /api/v1/... и алиас /api/... отдают одно и то же (TASK-204, ADR-003)."""
+    for path in ("/api/capabilities", "/api/v1/capabilities"):
+        response = await api.client.get(path)
+        assert response.status_code == 200, path
+        body = response.json()
+        assert body["service"] == "opcua-sendbox"
+        assert body["api_version"] == 1
+        assert body["version"] == (await api.client.get("/healthz")).json()["version"]
+        assert "alarms" in body["features"] and "shared_server" in body["features"]
+        assert body["limits"] == {
+            "sessions_per_key": 2,
+            "sessions_per_ip": 4,
+            "sessions_total": 10,
+            "tags_per_session": 100,
+            "alarms_per_session": 20,
+            "idle_timeout_s": 60,
+            "max_lifetime_s": 600,
+        }
+    for path in ("/api/keys", "/api/v1/keys"):
+        created = await api.client.post(path)
+        assert created.status_code == 201, path

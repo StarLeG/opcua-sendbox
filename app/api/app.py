@@ -47,10 +47,11 @@ def create_app(
         title="OPC UA SendBox API",
         description=(
             "REST API OPC UA SendBox - публичной песочницы OPC UA серверов. "
-            "Получите ключ через POST /api/keys, создайте личный сервер через "
-            "POST /api/sessions и подключите к выданному endpoint свой клиент: "
+            "Контракт версионированный: /api/v1/... (пути /api/... работают как совместимый "
+            "алиас). Получите ключ через POST /api/v1/keys, создайте личный сервер через "
+            "POST /api/v1/sessions и подключите к выданному endpoint свой клиент: "
             "UaExpert, SCADA, ModbusToolkit. Общий демо-сервер работает всегда, "
-            "его адрес отдаёт GET /api/shared."
+            "его адрес отдаёт GET /api/v1/shared, возможности — GET /api/v1/capabilities."
         ),
         lifespan=lifespan,
         # Swagger — своя страница /api/docs в оформлении сайта (pages.py).
@@ -79,7 +80,10 @@ def create_app(
         services.stats.hit(response.status_code)
         return response
 
-    app.include_router(router)
+    # Двойной префикс: /api/v1 — канонический контракт в OpenAPI, /api — совместимый
+    # алиас для UI, README и старых скриптов (ADR-003).
+    app.include_router(router, prefix="/api/v1")
+    app.include_router(router, prefix="/api", include_in_schema=False)
     app.include_router(health_router)
     app.include_router(ws_router)
     app.include_router(pages_router)

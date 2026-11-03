@@ -77,3 +77,15 @@ class StatsOut(BaseModel):
     requests_total: int = Field(description="Всего HTTP-запросов с запуска")
     errors_total: int = Field(description="Всего ответов со статусом 400+ с запуска")
     uptime_s: float = Field(description="Время работы сервиса, с")
+
+
+class CapabilitiesOut(BaseModel):
+    """Возможности сервиса для честной деградации клиентов (TASK-204, ADR-003)."""
+
+    service: str = Field(description="Имя сервиса")
+    version: str = Field(description="Версия сервиса, SemVer")
+    api_version: int = Field(description="Версия контракта REST API; путь /api/v{N}/...")
+    features: list[str] = Field(
+        description="Поддерживаемые возможности; отсутствие в списке = не поддерживается"
+    )
+    limits: dict[str, int] = Field(description="Лимиты песочницы (сессии, теги, алармы, таймауты)")

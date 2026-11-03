@@ -24,6 +24,7 @@ from fastapi.responses import PlainTextResponse
 from app.api.models import (
     AlarmStateOut,
     AlarmTrigger,
+    CapabilitiesOut,
     ErrorOut,
     HealthOut,
     KeyOut,
@@ -46,8 +47,22 @@ from app.opcua.session_manager import (
 from app.opcua.tags import AlarmSpec, TagSpec, check_session_content
 from app.opcua.worker_handle import WorkerCommandError, WorkerError, WorkerGoneError
 
-router = APIRouter(prefix="/api")
+# Роутер монтируется дважды: /api/v1 (канонический контракт) и /api (алиас) — ADR-003.
+router = APIRouter()
 health_router = APIRouter()
+
+#: Версия контракта REST API; несовместимое изменение — новый префикс /api/v2/... (ADR-003).
+API_VERSION = 1
+#: Поддерживаемые возможности: только перечисленные; отсутствие = не поддерживается (ADR-003).
+FEATURES = (
+    "shared_server",  # постоянный демо-сервер только для чтения
+    "personal_sessions",  # личные серверы с API-ключом
+    "tag_write",  # запись клиента в writable-теги
+    "history",  # HistoryRead Raw из памяти
+    "alarms",  # события Alarms & Conditions
+    "alarm_trigger",  # ручной триггер аларма через API
+    "security_none",  # SecurityPolicy=None, анонимный вход
+)
 
 _ERRORS: dict[int | str, dict[str, Any]] = {
     code: {"model": ErrorOut} for code in (401, 404, 409, 422, 429, 503)
@@ -299,6 +314,27 @@ def shared_info(services: ServicesDep) -> SharedOut:
     """Постоянный общий демо-сервер: ключ не нужен, только чтение."""
     shared = services.manager.shared
     return SharedOut(endpoint_url=shared.endpoint_url, status=shared.status, restarts=shared.restarts)
+
+
+@router.get("/capabilities", response_model=CapabilitiesOut, tags=["Служебное"])
+def capabilities(services: ServicesDep) -> CapabilitiesOut:
+    """Версия сервиса, поддерживаемые возможности и лимиты — чтобы клиент деградировал честно (ADR-003)."""
+    config = services.config
+    return CapabilitiesOut(
+        service="opcua-sendbox",
+        version=_project_version(),
+        api_version=API_VERSION,
+        features=list(FEATURES),
+        limits={
+            "sessions_per_key": config.SESSIONS_PER_KEY,
+            "sessions_per_ip": config.SESSIONS_PER_IP,
+            "sessions_total": config.SESSIONS_TOTAL,
+            "tags_per_session": config.TAGS_PER_SESSION,
+            "alarms_per_session": config.ALARMS_PER_SESSION,
+            "idle_timeout_s": config.SESSION_IDLE_TIMEOUT_S,
+            "max_lifetime_s": config.SESSION_MAX_LIFETIME_S,
+        },
+    )
 
 
 @router.get("/stats", response_model=StatsOut, tags=["Служебное"])
