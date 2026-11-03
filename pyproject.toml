@@ -3,12 +3,21 @@ name = "opcua-sendbox"
 version = "0.1.0"
 description = "OPC UA SendBox - публичная песочница OPC UA серверов (opcua-sendbox.electroman.by)"
 requires-python = ">=3.11"
+authors = [{ name = "Олег Старинский (StarLeG)" }]
+keywords = ["opc-ua", "opcua-server", "simulator", "sandbox", "scada", "industrial-automation"]
 dependencies = [
     "asyncua>=2.1.0",
     "fastapi>=0.162.0",
     "uvicorn>=0.54.0",
     "websockets>=17.4",
 ]
+
+[project.urls]
+Homepage = "https://opcua-sendbox.electroman.by"
+Repository = "https://github.com/StarLeG/opcua-sendbox"
+Author = "https://github.com/StarLeG"
+"Modbus SendBox" = "https://modbus-sendbox.electroman.by"
+ModbusToolkit = "https://modbustoolkit.electroman.by"
 
 [dependency-groups]
 dev = [
