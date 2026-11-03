@@ -100,7 +100,7 @@ ModbusToolkit не подключались к `opc.tcp://localhost:…`. Python
   EventId, по разу на каждый монитор) — это ожидаемо, клиент сам выбирает источник.
   Отсутствие `LimitState` ModbusToolkit не мешает: его фильтр поле не запрашивает.
 - `LimitState` в событии отсутствует. **Ждёт ручной проверки:** UaExpert (Event View,
-  Alarms & Conditions View) и ModbusToolkit («События»). Если какой-то из них отображает
+  Alarms & Conditions View); ModbusToolkit — PASS (см. выше). Если UaExpert отображает
   событие некорректно, задача TASK-103 не начинается, и выбор (OffNormalAlarmType / ручной
   LimitState / патч) выносится к владельцу.
 
