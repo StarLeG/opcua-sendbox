@@ -30,6 +30,7 @@ from typing import Any, Protocol
 from app.config import Config
 from app.opcua.keys import KeyRegistry
 from app.opcua.port_allocator import PortAllocator, PortsExhaustedError
+from app.opcua.security import ServerSecurity
 from app.opcua.tags import AlarmSpec, TagSpec, check_session_content, demo_alarms, demo_tags
 from app.opcua.worker import WorkerParams
 from app.opcua.worker_handle import MessageCallback, WorkerError, WorkerHandle
@@ -242,6 +243,7 @@ class SessionManager:
             state_hz=float(self.config.WS_STATE_HZ),
             tags=tuple(t.model_dump() for t in tags),
             alarms=tuple(a.model_dump() for a in alarms),
+            security=ServerSecurity.from_config(self.config),
         )
         handle = self._factory(params, lambda message: self._on_session_message(session.id, message))
         session.handle = handle
@@ -384,6 +386,7 @@ class SessionManager:
             state_hz=float(self.config.WS_STATE_HZ),
             tags=tuple(t.model_dump() for t in demo_tags(shared=True)),
             alarms=tuple(a.model_dump() for a in demo_alarms()),
+            security=ServerSecurity.from_config(self.config),
         )
 
     async def start_shared(self) -> None:

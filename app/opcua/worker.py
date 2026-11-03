@@ -30,6 +30,7 @@ from typing import Any, Protocol
 
 from app.logging_setup import configure_logging
 from app.opcua.address_space import AddressSpace, client_count, create_server
+from app.opcua.security import ServerSecurity
 from app.opcua.tags import AlarmSpec, TagSpec
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,8 @@ class WorkerParams:
 
     port: int
     endpoint_url: str
+    #: Шифрование и демо-учётки (ADR-004); в воркере всегда одни и те же.
+    security: ServerSecurity
     bind_host: str | None = None
     server_name: str = "OPC UA SendBox"
     history_size: int = 1000
@@ -152,6 +155,7 @@ async def _serve(
         port=params.port,
         bind_host=params.bind_host,
         server_name=params.server_name,
+        security=params.security,
     )
     space = AddressSpace(
         server,

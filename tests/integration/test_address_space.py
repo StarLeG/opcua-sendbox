@@ -53,7 +53,7 @@ async def test_ipv6_loopback_connects(sandbox: Sandbox) -> None:
 
 
 async def test_get_endpoints_announces_public_host(sandbox: Sandbox) -> None:
-    """ADR-002: без EndpointUrl в запросе сервер отдаёт публичный хост, а не sockname."""
+    """ADR-002: без EndpointUrl сервер отдаёт публичный хост; ADR-004: обе политики."""
     client = Client(sandbox.url)
     await client.connect_socket()
     try:
@@ -67,7 +67,19 @@ async def test_get_endpoints_announces_public_host(sandbox: Sandbox) -> None:
         client.disconnect_socket()
     expected = f"opc.tcp://{PUBLIC_HOST}:{sandbox.port}/electroman/"
     assert {e.EndpointUrl for e in endpoints} == {expected}
-    assert {e.SecurityPolicyUri for e in endpoints} == {"http://opcfoundation.org/UA/SecurityPolicy#None"}
+    assert {e.SecurityPolicyUri for e in endpoints} == {
+        "http://opcfoundation.org/UA/SecurityPolicy#None",
+        "http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256",
+    }
+    # UaExpert часто выбирает Sign: оба режима должны быть объявлены (ADR-004).
+    assert {
+        (e.SecurityPolicyUri, e.SecurityMode)
+        for e in endpoints
+        if e.SecurityPolicyUri.endswith("Basic256Sha256")
+    } == {
+        ("http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256", ua.MessageSecurityMode.Sign),
+        ("http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256", ua.MessageSecurityMode.SignAndEncrypt),
+    }
 
 
 async def test_data_types_and_coercion(sandbox: Sandbox) -> None:

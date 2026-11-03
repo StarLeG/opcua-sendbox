@@ -43,8 +43,10 @@ Modbus SendBox (`modbus-test-server`, Python/FastAPI). Стек и соглаш�
 | `InternalSession._current_connections` | `client_count` для idle-таймера | `test_demo_set_builds_and_client_count` |
 | наследование `HistoryDict.save_node_value` | подстановка SourceTimestamp | `tests/unit/test_history.py`, `test_external_write_without_source_timestamp` |
 | `ServerItemCallback.request_params.NodesToWrite` в PreWrite (мутация `DataValue`) | SourceTimestamp у записи клиента | `test_external_write_without_source_timestamp` |
+| `InternalServer.set_user_manager(UserManager)` (ADR-004) | демо-учётки: вход по логину/паролю, `get_user` зовётся и для анонимного токена | `test_demo_user_manager_accepts_anonymous`, `test_bad_password_rejected` |
 
 ## Ссылки
 
 - `docs/adr/ADR-001-architecture.md`
 - `docs/adr/ADR-002-asyncua-spike.md`
+- `docs/adr/ADR-004-security.md`

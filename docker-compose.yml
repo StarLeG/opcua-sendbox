@@ -30,6 +30,10 @@ services:
       OPCUA_SHARED_PORT: "4840"
       OPCUA_SESSION_PORT_MIN: "4841"
       OPCUA_SESSION_PORT_MAX: "5000"
+      # Сертификат живёт на томе: отпечаток переживает выкладки (ADR-004).
+      OPCUA_CERTS_DIR: "/data/certs"
+      OPCUA_DEMO_USER: "${OPCUA_DEMO_USER:-sendbox}"
+      OPCUA_DEMO_PASSWORD: "${OPCUA_DEMO_PASSWORD:-sendbox}"
       SESSIONS_PER_KEY: "${SESSIONS_PER_KEY:-2}"
       SESSIONS_PER_IP: "${SESSIONS_PER_IP:-4}"
       SESSIONS_TOTAL: "${SESSIONS_TOTAL:-50}"
@@ -49,6 +53,8 @@ services:
       LOG_LEVEL: "${LOG_LEVEL:-info}"
     # 50 сессий × ~40 МБ + общий сервер и web — с запасом.
     mem_limit: "${MEM_LIMIT:-3g}"
+    volumes:
+      - sendbox-certs:/data/certs
     healthcheck:
       test:
         [
@@ -63,3 +69,7 @@ services:
       start_period: 20s
     # Остановка: lifespan закрывает все сессии; воркерам нужно время.
     stop_grace_period: 30s
+
+volumes:
+  # Сертификат сервера (ADR-004): переживает выкладки и пересборку образа.
+  sendbox-certs:

@@ -14,6 +14,7 @@ from app.config import Config
 from app.opcua.port_allocator import probe_bind
 from app.opcua.session_manager import SessionManager, SessionState
 from app.opcua.tags import TagSpec
+from tests.integration.conftest import TEST_CERTS_DIR
 
 SHARED_PORT = 15059
 
@@ -24,6 +25,7 @@ def make_config(**changes: Any) -> Config:
         "OPCUA_SHARED_PORT": SHARED_PORT,
         "OPCUA_SESSION_PORT_MIN": 15060,
         "OPCUA_SESSION_PORT_MAX": 15100,
+        "OPCUA_CERTS_DIR": str(TEST_CERTS_DIR),
         "SESSIONS_PER_KEY": 10,
         "SESSIONS_PER_IP": 10,
         "SESSIONS_TOTAL": 20,

@@ -27,6 +27,7 @@ from datetime import UTC, datetime
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as package_version
 from typing import Any, Literal, cast
+from urllib.parse import urlsplit
 
 from asyncua import Node, Server, ua
 from asyncua.common.callback import CallbackType, ServerItemCallback
@@ -35,6 +36,7 @@ from asyncua.server.history import HistoryDict
 from asyncua.server.internal_session import InternalSession
 
 from app.opcua.generators import ValueGenerator, create_generator
+from app.opcua.security import DemoUserManager, ServerSecurity, ensure_server_cert
 from app.opcua.tags import AlarmSpec, DataType, TagSpec, coerce_value
 
 logger = logging.getLogger(__name__)
@@ -195,9 +197,15 @@ async def create_server(
     endpoint_url: str,
     port: int,
     bind_host: str | None,
+    security: ServerSecurity,
     server_name: str = "OPC UA SendBox",
 ) -> Server:
-    """Сервер asyncua с настройками ADR-002 (ещё не запущен, адресное пространство пустое)."""
+    """Сервер asyncua с настройками ADR-002 и ADR-004 (ещё не запущен, пространство пустое).
+
+    Шифрование и вход всегда одни и те же (ADR-004): SecurityPolicy=None и
+    Basic256Sha256 (Sign/SignAndEncrypt) сосуществуют, анонимный вход сохраняется
+    наравне с демо-учёткой.
+    """
     server = Server()
     # ConditionRefresh и события RefreshStart/End — только до init() (ADR-002 п. 3b).
     server.iserver.bind_condition_methods = True
@@ -207,8 +215,7 @@ async def create_server(
     # host=None: все интерфейсы, IPv4 и IPv6 (ADR-002 п. 1). Аннотация asyncua — str.
     server.socket_address = (bind_host, port)  # type: ignore[assignment]
     server.set_match_discovery_client_ip(False)
-    server.set_security_policy([ua.SecurityPolicyType.NoSecurity])
-    server.set_identity_tokens([ua.AnonymousIdentityToken])
+    await _apply_security(server, endpoint_url, security)
     server.set_server_name(server_name)
     await server.set_application_uri(APPLICATION_URI)
     version = _project_version()
@@ -221,6 +228,28 @@ async def create_server(
         build_date=_utcnow(),
     )
     return server
+
+
+async def _apply_security(server: Server, endpoint_url: str, security: ServerSecurity) -> None:
+    """Шифрование и вход по ADR-004: политики, identity tokens, сертификат, UserManager.
+
+    Sign и SignAndEncrypt перечислены оба: это разные режимы, UaExpert часто
+    выбирает Sign (ADR-004 п. 3). Анонимов `DemoUserManager` пускает явно —
+    иначе старые клиенты получат BadUserAccessDenied.
+    """
+    host_name = urlsplit(endpoint_url).hostname or "localhost"
+    cert_file, key_file = await ensure_server_cert(
+        security.certs_dir, host_name=host_name, app_uri=APPLICATION_URI
+    )
+    server.set_security_policy([
+        ua.SecurityPolicyType.NoSecurity,
+        ua.SecurityPolicyType.Basic256Sha256_Sign,
+        ua.SecurityPolicyType.Basic256Sha256_SignAndEncrypt,
+    ])
+    server.set_identity_tokens([ua.AnonymousIdentityToken, ua.UserNameIdentityToken])
+    server.iserver.set_user_manager(DemoUserManager(security.demo_user, security.demo_password))
+    await server.load_certificate(cert_file)
+    await server.load_private_key(key_file)
 
 
 def client_count() -> int:

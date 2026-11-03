@@ -23,7 +23,7 @@
 | Параметр | Значение |
 |---|---|
 | Общий сервер | `opc.tcp://opcua-sendbox.electroman.by:4840/electroman/` |
-| Безопасность | `None`, анонимный вход |
+| Безопасность | `None` (анонимно) и `Basic256Sha256` (Sign/SignAndEncrypt), демо-учётка `sendbox`/`sendbox` |
 | Пространство имён | `urn:electroman:opcua-sendbox` (ns=2) |
 | Узлы | `Objects/SendBox/Tags/*`, `Objects/SendBox/Alarms/*` |
 | Web UI | [opcua-sendbox.electroman.by](https://opcua-sendbox.electroman.by) |
@@ -127,8 +127,9 @@ curl -s -X POST -H "X-API-Key: $KEY" https://opcua-sendbox.electroman.by/api/ses
 
 ## Ограничения
 
-- Соединение без шифрования (`SecurityPolicy=None`), вход анонимный. Basic256Sha256 и
-  логин/пароль появятся в следующей версии.
+- Доступны `SecurityPolicy=None` (анонимный вход) и `Basic256Sha256` (Sign и
+  SignAndEncrypt) с демо-учёткой `sendbox`/`sendbox`. Сертификат сервера
+  самоподписанный: при подключении по Basic256Sha256 клиент спросит доверие к нему.
 - Acknowledge и Confirm не поддерживаются: аларм сразу считается квитированным.
   `LimitState` в событии нет, потому что state machine `ExclusiveLimitAlarmType` в
   asyncua не реализована (ADR-002).

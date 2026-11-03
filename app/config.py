@@ -59,6 +59,11 @@ class Config:
     WEB_MAX_WRITE_PER_MIN_PER_IP: int = 50
     #: Выдача API-ключей на IP в час.
     KEYS_PER_HOUR_PER_IP: int = 10
+    #: Каталог самоподписанного сертификата сервера (ADR-004).
+    OPCUA_CERTS_DIR: str = "certs"
+    #: Демо-учётка OPC UA: вход по логину/паролю (ADR-004).
+    OPCUA_DEMO_USER: str = "sendbox"
+    OPCUA_DEMO_PASSWORD: str = "sendbox"
 
     def __post_init__(self) -> None:
         for spec in fields(self):
@@ -84,6 +89,10 @@ class Config:
             raise ValueError("SESSION_IDLE_TIMEOUT_S не может быть больше SESSION_MAX_LIFETIME_S")
         if not self.OPCUA_PUBLIC_HOST:
             raise ValueError("OPCUA_PUBLIC_HOST не может быть пустым")
+        if not self.OPCUA_CERTS_DIR:
+            raise ValueError("OPCUA_CERTS_DIR не может быть пустым")
+        if not self.OPCUA_DEMO_USER or not self.OPCUA_DEMO_PASSWORD:
+            raise ValueError("OPCUA_DEMO_USER и OPCUA_DEMO_PASSWORD не могут быть пустыми")
 
     @property
     def session_port_count(self) -> int:

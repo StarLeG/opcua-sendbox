@@ -53,8 +53,12 @@ async def test_every_page_has_ecosystem_donate_and_banner(client: httpx.AsyncCli
     if lang == "ru":
         # тестовый конфиг: простой 60 с, жизнь 600 с
         assert "SecurityPolicy=None" in banner.group(1)
+        assert "Basic256Sha256" in banner.group(1)
+        assert "sendbox" in banner.group(1)  # демо-учётка напечатана на странице (ADR-004)
         assert "после 1 мин" in banner.group(1) and "через 10 мин" in banner.group(1)
     else:
+        assert "Basic256Sha256" in banner.group(1)
+        assert "sendbox" in banner.group(1)
         assert "Acknowledge/Confirm is not supported" in banner.group(1)
         assert "after 1 min" in banner.group(1) and "after 10 min" in banner.group(1)
 

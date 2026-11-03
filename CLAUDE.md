@@ -40,6 +40,11 @@ docker compose up -d --build              # см. docs/DEPLOY.md
   настройками ADR-002, узлы `ns=2;s=Tags.*`/`Alarms.*`, `SendBoxHistory`, хуки
   PreWrite/PostWrite, `AlarmEvaluator` (пороги, гистерезис — state machine в asyncua нет),
   `emit_event` (рассылка события на SendBox **и** Server снимками).
+- `security.py` — SecurityPolicy Basic256Sha256 и демо-учётка (ADR-004):
+  `ServerSecurity` (frozen dataclass, едет в `WorkerParams` через pickle),
+  `DemoUserManager` (`get_user` зовётся и для анонимов — их пускаем явно),
+  `ensure_server_cert` (самоподписанный сертификат в `OPCUA_CERTS_DIR`, гонка
+  воркеров разрешается tmp-каталогом и `rename`).
 - `worker.py` (в дочернем процессе) ↔ `worker_handle.py` (в родителе): IPC из трёх
   очередей — команды с ответами, control (не теряется), telemetry (ограничена,
   drop-newest). Reader-нити → event loop через `call_soon_threadsafe`.

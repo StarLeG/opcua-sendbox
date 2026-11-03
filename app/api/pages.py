@@ -53,16 +53,16 @@ NAV_SECTIONS: tuple[tuple[str, str, str], ...] = (
 
 WARNING_BANNER_RU = (
     "Это демо-сервер для проверки клиентов, не используйте его для production-данных. "
-    "Соединение без шифрования: SecurityPolicy=None, анонимный вход. Basic256Sha256 и "
-    "логин/пароль появятся в следующей версии. Алармы приходят событиями A&C, "
+    "Доступны SecurityPolicy=None (анонимный вход) и Basic256Sha256 (Sign/SignAndEncrypt, "
+    "логин и пароль {user}/{password}). Алармы приходят событиями A&C, "
     "Acknowledge/Confirm не поддерживается. Личная сессия закрывается после {idle} "
     "без активности и в любом случае через {life}. Подключённый OPC UA клиент "
     "считается активностью. Все данные живут в памяти."
 )
 WARNING_BANNER_EN = (
     "This is a demo server for testing clients, do not use it for production data. "
-    "The connection is unencrypted: SecurityPolicy=None, anonymous login. Basic256Sha256 "
-    "and user/password come in the next version. Alarms arrive as A&C events, "
+    "Both SecurityPolicy=None (anonymous login) and Basic256Sha256 (Sign/SignAndEncrypt, "
+    "user and password {user}/{password}) are available. Alarms arrive as A&C events, "
     "Acknowledge/Confirm is not supported. A personal session closes after {idle} "
     "without activity and in any case after {life}. A connected OPC UA client counts "
     "as activity. All data lives in memory."
@@ -292,7 +292,10 @@ def _shell(
         for href, ru, en in NAV_SECTIONS
     )
     banner = (WARNING_BANNER_RU if lang == "ru" else WARNING_BANNER_EN).format(
-        idle=_duration(config.SESSION_IDLE_TIMEOUT_S, lang), life=_duration(config.SESSION_MAX_LIFETIME_S, lang)
+        idle=_duration(config.SESSION_IDLE_TIMEOUT_S, lang),
+        life=_duration(config.SESSION_MAX_LIFETIME_S, lang),
+        user=config.OPCUA_DEMO_USER,
+        password=config.OPCUA_DEMO_PASSWORD,
     )
     site = t(lang, "OPC UA SendBox - публичная песочница OPC UA", "OPC UA SendBox - public OPC UA sandbox")
     return f"""<!DOCTYPE html>
@@ -542,18 +545,18 @@ curl -s -X POST -H "X-API-Key: $KEY" {site_url}/api/sessions'''
 <dl>
   <dt>{t(lang, "Общий сервер", "Shared server")}</dt><dd><code>{escape(shared)}</code></dd>
   <dt>{t(lang, "Личные серверы", "Personal servers")}</dt><dd>{t(lang, "порты", "ports")} <code>{config.OPCUA_SESSION_PORT_MIN}–{config.OPCUA_SESSION_PORT_MAX}</code></dd>
-  <dt>{t(lang, "Безопасность", "Security")}</dt><dd><code>None</code>, {t(lang, "анонимный вход", "anonymous login")}</dd>
+  <dt>{t(lang, "Безопасность", "Security")}</dt><dd><code>None</code> ({t(lang, "анонимный вход", "anonymous login")}) и <code>Basic256Sha256</code> (Sign/SignAndEncrypt): {t(lang, "логин и пароль", "user and password")} <code>{escape(config.OPCUA_DEMO_USER)}</code>/<code>{escape(config.OPCUA_DEMO_PASSWORD)}</code></dd>
   <dt>{t(lang, "Пространство имён", "Namespace")}</dt><dd><code>urn:electroman:opcua-sendbox</code> (ns=2)</dd>
   <dt>{t(lang, "Узлы", "Nodes")}</dt><dd><code>Objects/SendBox/Tags/*</code>, <code>Objects/SendBox/Alarms/*</code></dd>
 </dl>
 <h3>UaExpert</h3>
 <p>{t(lang,
-      "Add Server → Custom Discovery → вставьте адрес, политика None, Anonymous. События: Document → Add → Event View, перетащите узел Server; алармы — Alarms &amp; Conditions View.",
-      "Add Server → Custom Discovery → paste the address, policy None, Anonymous. Events: Document → Add → Event View, drag the Server node; alarms — Alarms &amp; Conditions View.")}</p>
+      "Add Server → Custom Discovery → вставьте адрес, политика None, Anonymous (или Basic256Sha256, Sign/SignAndEncrypt, Username с парой sendbox/sendbox). События: Document → Add → Event View, перетащите узел Server; алармы — Alarms &amp; Conditions View.",
+      "Add Server → Custom Discovery → paste the address, policy None, Anonymous (or Basic256Sha256, Sign/SignAndEncrypt, Username with sendbox/sendbox). Events: Document → Add → Event View, drag the Server node; alarms — Alarms &amp; Conditions View.")}</p>
 <h3>ModbusToolkit</h3>
 <p>{t(lang,
-      "Вкладка OPC UA: вставьте адрес в поле «Адрес», безопасность None, «Подключиться». История — вкладка «История», события — «События» → подписка на SendBox или Server.",
-      "OPC UA tab: paste the address, security None, Connect. History is on the History page, events on Events → subscribe to SendBox or Server.")}</p>
+      "Вкладка OPC UA: вставьте адрес в поле «Адрес», безопасность None (или Basic256Sha256 с логином sendbox), «Подключиться». История — вкладка «История», события — «События» → подписка на SendBox или Server.",
+      "OPC UA tab: paste the address, security None (or Basic256Sha256 with login sendbox), Connect. History is on the History page, events on Events → subscribe to SendBox or Server.")}</p>
 <h3>Python (asyncua)</h3>
 {_example("example-python", "python", python, lang)}
 <h3>{t(lang, "Python (asyncua): подписка с переподключением", "Python (asyncua): subscription with reconnection")}</h3>
@@ -582,7 +585,7 @@ curl -s -X POST -H "X-API-Key: $KEY" {site_url}/api/sessions'''
   <li>{t(lang, "Сессий: {k} на ключ, {i} на IP, {n} всего.", "Sessions: {k} per key, {i} per IP, {n} in total.").format(k=config.SESSIONS_PER_KEY, i=config.SESSIONS_PER_IP, n=config.SESSIONS_TOTAL)}</li>
   <li>{t(lang, "Тегов до {t} и алармов до {a} на сессию.", "Up to {t} tags and {a} alarms per session.").format(t=config.TAGS_PER_SESSION, a=config.ALARMS_PER_SESSION)}</li>
   <li>{t(lang, "Acknowledge и Confirm не поддерживаются: аларм сразу считается квитированным. LimitState в событии нет.", "Acknowledge and Confirm are not supported: an alarm is treated as acknowledged at once. Events carry no LimitState.")}</li>
-  <li>{t(lang, "Шифрование и вход по логину появятся в следующей версии.", "Encryption and user login come in the next version.")}</li>
+  <li>{t(lang, "Сертификат сервера самоподписанный: при подключении по Basic256Sha256 клиент спросит доверие к нему.", "The server certificate is self-signed: on a Basic256Sha256 connection the client will ask you to trust it.")}</li>
 </ul>
 
 <h2>{t(lang, "Исходный код", "Source code")}</h2>

@@ -232,6 +232,7 @@ async def test_capabilities_and_api_alias(api: Api) -> None:
         assert body["api_version"] == 1
         assert body["version"] == (await api.client.get("/healthz")).json()["version"]
         assert "alarms" in body["features"] and "shared_server" in body["features"]
+        assert "security_basic256sha256" in body["features"] and "username_identity" in body["features"]
         assert body["limits"] == {
             "sessions_per_key": 2,
             "sessions_per_ip": 4,

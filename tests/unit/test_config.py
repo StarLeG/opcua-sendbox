@@ -48,6 +48,9 @@ def test_from_env_rejects_non_integer(monkeypatch: pytest.MonkeyPatch) -> None:
         ({"SESSIONS_PER_KEY": 5, "SESSIONS_PER_IP": 4}, "SESSIONS_PER_KEY"),
         ({"SESSION_IDLE_TIMEOUT_S": 20000}, "SESSION_IDLE_TIMEOUT_S"),
         ({"OPCUA_PUBLIC_HOST": ""}, "OPCUA_PUBLIC_HOST"),
+        ({"OPCUA_CERTS_DIR": ""}, "OPCUA_CERTS_DIR"),
+        ({"OPCUA_DEMO_USER": ""}, "OPCUA_DEMO_USER"),
+        ({"OPCUA_DEMO_PASSWORD": ""}, "OPCUA_DEMO_PASSWORD"),
     ],
 )
 def test_inconsistent_config_rejected(changes: dict[str, object], message: str) -> None:

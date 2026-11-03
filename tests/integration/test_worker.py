@@ -17,13 +17,14 @@ from app.opcua.worker_handle import (
     WorkerHandle,
     WorkerStartError,
 )
-from tests.integration.conftest import PUBLIC_HOST
+from tests.integration.conftest import PUBLIC_HOST, TEST_SECURITY
 
 
 def params_for(port: int, **changes: Any) -> WorkerParams:
     base: dict[str, Any] = {
         "port": port,
         "endpoint_url": f"opc.tcp://{PUBLIC_HOST}:{port}/electroman/",
+        "security": TEST_SECURITY,
         "history_size": 100,
         "state_hz": 10.0,
         "tags": tuple(t.model_dump() for t in demo_tags(shared=False)),

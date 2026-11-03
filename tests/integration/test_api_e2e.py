@@ -14,6 +14,7 @@ from app.api.app import create_app
 from app.api.services import build_services
 from app.config import Config
 from app.opcua.session_manager import SessionManager
+from tests.integration.conftest import TEST_CERTS_DIR
 
 
 @pytest.fixture
@@ -24,6 +25,7 @@ async def http() -> AsyncIterator[httpx.AsyncClient]:
         OPCUA_SHARED_PORT=15059,
         OPCUA_SESSION_PORT_MIN=15060,
         OPCUA_SESSION_PORT_MAX=15100,
+        OPCUA_CERTS_DIR=str(TEST_CERTS_DIR),
         WORKER_START_TIMEOUT_S=30,
     )
     manager = SessionManager(config)

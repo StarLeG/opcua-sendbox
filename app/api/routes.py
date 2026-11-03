@@ -62,6 +62,8 @@ FEATURES = (
     "alarms",  # события Alarms & Conditions
     "alarm_trigger",  # ручной триггер аларма через API
     "security_none",  # SecurityPolicy=None, анонимный вход
+    "security_basic256sha256",  # SecurityPolicy Basic256Sha256, Sign и SignAndEncrypt
+    "username_identity",  # UserNameIdentityToken: демо-учётка sendbox (ADR-004)
 )
 
 _ERRORS: dict[int | str, dict[str, Any]] = {
