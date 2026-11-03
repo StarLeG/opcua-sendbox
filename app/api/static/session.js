@@ -217,7 +217,7 @@ function renderParams() {
     .map((p) =>
       typeof p.default === "boolean"
         ? `<label class="check"><input type="checkbox" data-param="${p.name}" ${p.default ? "checked" : ""}> ${escapeHtml(p.label)}</label>`
-        : `<label>${escapeHtml(p.label)}<input data-param="${p.name}" value="${escapeHtml(p.default)}"></label>`,
+        : `<label${p.name === "points" || p.name === "values" ? ' class="wide"' : ""}>${escapeHtml(p.label)}<input data-param="${p.name}" value="${escapeHtml(p.default)}"></label>`,
     )
     .join("");
   form.writable.disabled = form.kind.value !== "constant";

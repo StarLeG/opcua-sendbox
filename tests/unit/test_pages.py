@@ -170,6 +170,14 @@ async def test_static_served(client: httpx.AsyncClient, path: str) -> None:
     assert (await client.get(path)).status_code == 200
 
 
+async def test_list_params_are_full_width(client: httpx.AsyncClient) -> None:
+    """Списочные поля (points, values) растягиваются на всю ширину формы."""
+    css = (await client.get("/static/app.css")).text
+    js = (await client.get("/static/session.js")).text
+    assert ".form-row > label.wide" in css
+    assert 'class="wide"' in js
+
+
 async def test_pages_not_in_openapi(client: httpx.AsyncClient) -> None:
     paths = (await client.get("/api/openapi.json")).json()["paths"]
     assert "/" not in paths and "/docs" not in paths and "/session/{session_id}" not in paths

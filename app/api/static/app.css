@@ -243,6 +243,8 @@ label input[type="checkbox"]{margin-left:0;vertical-align:middle;}
   flex-direction:row;align-items:center;gap:6px;align-self:end;
 }
 .form-row > label.check input[type="checkbox"]{width:auto;margin:0;}
+/* списочные поля (точки профиля, значения ступенек) — на всю ширину строки */
+.form-row > label.wide{grid-column:1 / -1;}
 .form-actions{margin:0 0 14px;}
 
 /* ---------- таблицы, списки, код ---------- */
