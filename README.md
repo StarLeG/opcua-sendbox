@@ -41,6 +41,28 @@ async def main():
 asyncio.run(main())
 ```
 
+Подписка с переподключением — `auto_reconnect=True` заставляет клиент при обрыве
+связи переподключиться и восстановить подписки сам:
+
+```python
+import asyncio
+from asyncua import Client
+
+class Handler:
+    def datachange_notification(self, node, value, data):
+        print(node, "=", value)
+
+async def main():
+    async with Client("opc.tcp://opcua-sendbox.electroman.by:4840/electroman/", auto_reconnect=True) as client:
+        node = client.get_node("ns=2;s=Tags.Sine")
+        subscription = await client.create_subscription(500, Handler())
+        await subscription.subscribe_data_change(node)
+        while True:
+            await asyncio.sleep(3600)
+
+asyncio.run(main())
+```
+
 Как подключиться из UaExpert и ModbusToolkit, написано в разделе «Документация» на сайте.
 
 ## Что умеет

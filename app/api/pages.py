@@ -517,6 +517,24 @@ async def main():
         print("Sine =", await sine.read_value())
 
 asyncio.run(main())'''
+    python_sub = f'''import asyncio
+from asyncua import Client
+
+class Handler:
+    def datachange_notification(self, node, value, data):
+        print(node, "=", value)
+
+async def main():
+    # auto_reconnect=True: при обрыве клиент переподключается
+    # и восстанавливает подписки сам
+    async with Client("{shared}", auto_reconnect=True) as client:
+        node = client.get_node("ns=2;s=Tags.Sine")
+        subscription = await client.create_subscription(500, Handler())
+        await subscription.subscribe_data_change(node)
+        while True:
+            await asyncio.sleep(3600)
+
+asyncio.run(main())'''
     curl = f'''KEY=$(curl -s -X POST {site_url}/api/keys | jq -r .key)
 curl -s -X POST -H "X-API-Key: $KEY" {site_url}/api/sessions'''
     return f"""
@@ -538,6 +556,15 @@ curl -s -X POST -H "X-API-Key: $KEY" {site_url}/api/sessions'''
       "OPC UA tab: paste the address, security None, Connect. History is on the History page, events on Events → subscribe to SendBox or Server.")}</p>
 <h3>Python (asyncua)</h3>
 {_example("example-python", "python", python, lang)}
+<h3>{t(lang, "Python (asyncua): подписка с переподключением", "Python (asyncua): subscription with reconnection")}</h3>
+<p>{t(lang,
+      "auto_reconnect=True: при обрыве связи клиент переподключается и восстанавливает подписки сам. "
+      "UaExpert также восстанавливает подписки автоматически, а в библиотеке open62541 (C/C++) "
+      "восстановление сессии и подписок встроено.",
+      "auto_reconnect=True: on connection loss the client reconnects and restores subscriptions on its own. "
+      "UaExpert also restores subscriptions automatically, and the open62541 (C/C++) library "
+      "has session and subscription recovery built in.")}</p>
+{_example("example-subscription", "python", python_sub, lang)}
 <h3>REST API</h3>
 {_example("example-curl", "bash", curl, lang)}
 <p class="note" id="example-status"></p>

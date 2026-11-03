@@ -157,6 +157,8 @@ async def test_docs_has_examples_and_limits(client: httpx.AsyncClient) -> None:
     html = (await client.get("/docs")).text
     assert "git clone https://github.com/StarLeG/opcua-sendbox.git" in html
     assert "ns=2;s=Tags.Sine" in html
+    assert "create_subscription" in html  # пример подписки с переподключением
+    assert "auto_reconnect=True" in html
     assert "Сессий: 2 на ключ, 4 на IP, 10 всего." in html
     assert "Олег Старинский" in html
 
