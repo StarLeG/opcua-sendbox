@@ -6,20 +6,19 @@ Web-слушатель — `WEB_HOST`/`WEB_PORT`, OPC UA — переменны�
 """
 from __future__ import annotations
 
-import logging
 import os
 
 import uvicorn
 
 from app.api.app import create_app
 from app.config import Config
+from app.logging_setup import configure_logging
 
 
 def main() -> None:
-    logging.basicConfig(
-        level=os.environ.get("LOG_LEVEL", "info").upper(),
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
+    log_level = os.environ.get("LOG_LEVEL", "info")
+    # LOG_FORMAT=json — одна строка JSON на событие (journald, docker logs, Loki).
+    configure_logging(os.environ.get("LOG_FORMAT", "text"), log_level)
     config = Config.from_env()
     uvicorn.run(
         create_app(config),
@@ -28,7 +27,9 @@ def main() -> None:
         # За nginx реальный IP клиента приходит в X-Forwarded-For; доверяем только
         # перечисленным адресам, иначе лимиты по IP считали бы всех одним клиентом.
         forwarded_allow_ips=os.environ.get("FORWARDED_ALLOW_IPS", "127.0.0.1"),
-        log_level=os.environ.get("LOG_LEVEL", "info"),
+        log_level=log_level,
+        # uvicorn не настраивает логи сам: общий формат задан configure_logging.
+        log_config=None,
     )
 
 

@@ -28,6 +28,7 @@ import traceback
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from app.logging_setup import configure_logging
 from app.opcua.address_space import AddressSpace, client_count, create_server
 from app.opcua.tags import AlarmSpec, TagSpec
 
@@ -111,7 +112,10 @@ def run_worker(
     Ошибка запуска уходит в control как `{"type": "error", "fatal": True}`;
     код возврата процесса — 1.
     """
-    logging.basicConfig(level=logging.WARNING)
+    # env наследуется от родителя: тот же формат логов (text/json), уровень — WARNING,
+    # чтобы INFO asyncua про каждую сессию клиента не засоряли журнал сервиса.
+    with contextlib.suppress(ValueError):
+        configure_logging(os.environ.get("LOG_FORMAT", "text"), "warning")
     try:
         asyncio.run(_serve(params, commands, control, telemetry))
     except Exception as exc:

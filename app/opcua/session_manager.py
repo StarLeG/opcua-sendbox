@@ -128,6 +128,7 @@ class SharedServer:
     handle: Handle | None = None
     status: str = "down"  # running | restarting | down
     restarts: int = 0
+    clients: int = 0
     listeners: set[Listener] = field(default_factory=set)
 
 
@@ -153,10 +154,18 @@ class SessionManager:
         self._background: set[asyncio.Task[Any]] = set()
         self._reaper: asyncio.Task[None] | None = None
         self._closed = False
+        self._started_at = clock()
+        #: Счётчики для /metrics (с запуска процесса).
+        self.created_total = 0
+        self.start_failures_total = 0
+        self.closed_total: dict[str, int] = {}
         self.shared = SharedServer(
             port=config.OPCUA_SHARED_PORT,
             endpoint_url=config.endpoint_url(config.OPCUA_SHARED_PORT),
         )
+
+    def uptime(self) -> float:
+        return self._clock() - self._started_at
 
     # --- запросы ----------------------------------------------------------------------
 
@@ -245,8 +254,10 @@ class SessionManager:
                 session.state = SessionState.RUNNING
                 session.last_activity = self._clock()
             started = True
+            self.created_total += 1
             return session
         except WorkerError as exc:
+            self.start_failures_total += 1
             raise NoCapacityError(f"сервер сессии не запустился: {exc}") from exc
         finally:
             if not started:
@@ -290,6 +301,7 @@ class SessionManager:
                 await session.handle.stop()
         finally:
             self.allocator.release(session.port)
+            self.closed_total[reason] = self.closed_total.get(reason, 0) + 1
             session.publish({"type": "closed", "reason": reason})
             session.listeners.clear()
 
@@ -392,8 +404,11 @@ class SessionManager:
         return True
 
     def _on_shared_message(self, message: dict[str, Any]) -> None:
+        if message.get("type") == "client_count":
+            self.shared.clients = int(message.get("clients", 0))
         if message.get("type") == "exited" and not message.get("expected") and not self._closed:
             self.shared.status = "restarting"
+            self.shared.clients = 0
             self._spawn(self._restart_shared())
         for listener in list(self.shared.listeners):
             with contextlib.suppress(Exception):

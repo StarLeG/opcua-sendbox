@@ -19,6 +19,7 @@ from importlib.metadata import version as package_version
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, Response, status
+from fastapi.responses import PlainTextResponse
 
 from app.api.models import (
     AlarmStateOut,
@@ -31,6 +32,7 @@ from app.api.models import (
     SessionOut,
     SharedOut,
 )
+from app.api.prometheus import MEDIA_TYPE, render_prometheus
 from app.api.services import AppServices
 from app.opcua.keys import KeyInfo, KeyRateLimitError
 from app.opcua.session_manager import (
@@ -311,3 +313,9 @@ def healthz(services: ServicesDep, response: Response) -> HealthOut:
         sessions=len(manager.sessions()),
         ports_free=manager.allocator.capacity - len(manager.allocator.in_use),
     )
+
+
+@health_router.get("/metrics", response_class=PlainTextResponse, tags=["Служебное"])
+def metrics(services: ServicesDep) -> PlainTextResponse:
+    """Метрики в формате Prometheus: сессии, порты, клиенты, общий сервер, дропы телеметрии."""
+    return PlainTextResponse(render_prometheus(services.manager), media_type=MEDIA_TYPE)

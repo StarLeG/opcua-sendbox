@@ -42,6 +42,6 @@
 
 ## Эпик 3 · Эксплуатация
 
-- [ ] [P1] **TASK-301 · Логи `LOG_FORMAT`, `/metrics`, `/healthz`**
+- [x] [P1] **TASK-301 · Логи `LOG_FORMAT`, `/metrics`, `/healthz`**
 - [ ] [P1] **TASK-302 · Docker/compose, nginx, systemd, `docs/DEPLOY.md`**
 - [ ] [P1] **TASK-303 · README, обновление CLAUDE.md**
