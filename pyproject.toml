@@ -27,6 +27,7 @@ dev = [
     "psutil>=7.2.2",
     "pytest>=9.2.0",
     "pytest-asyncio>=1.4.1.post1",
+    "pytest-timeout>=2.4.0",
     "ruff>=0.17.3",
     "types-psutil>=7.2.2.20260906",
 ]
@@ -43,6 +44,12 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 asyncio_default_test_loop_scope = "function"
 testpaths = ["tests"]
+# Зависший тест (ожидание сокета, очереди) не должен вешать CI на часы.
+timeout = 120
+filterwarnings = [
+    # starlette советует пакет httpx2 для TestClient; остаёмся на httpx (как Modbus SendBox)
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:starlette.exceptions.StarletteDeprecationWarning",
+]
 markers = [
     "integration: тесты с реальными OPC UA серверами и процессами (медленные)",
 ]

@@ -62,3 +62,33 @@ async def test_create_session_via_api_and_read_changing_value(http: httpx.AsyncC
     with pytest.raises((OSError, asyncio.TimeoutError, TimeoutError, ua.UaError)):
         async with Client(session["endpoint_url"], timeout=2):
             pass
+
+
+def test_websocket_streams_values_from_real_worker() -> None:
+    """Снимки значений из настоящего процесса доходят до WebSocket UI."""
+    from starlette.testclient import TestClient
+
+    config = replace(
+        Config(),
+        OPCUA_PUBLIC_HOST="localhost",
+        OPCUA_SHARED_PORT=15059,
+        OPCUA_SESSION_PORT_MIN=15060,
+        OPCUA_SESSION_PORT_MAX=15100,
+        WORKER_START_TIMEOUT_S=30,
+    )
+    manager = SessionManager(config)
+    app = create_app(services=build_services(config, manager), start_manager=False)
+    with TestClient(app) as client:
+        key = client.post("/api/keys").json()["key"]
+        sid = client.post("/api/sessions", headers={"X-API-Key": key}).json()["id"]
+        try:
+            with client.websocket_connect(f"/ws/sessions/{sid}?key={key}") as ws:
+                assert ws.receive_json()["type"] == "hello"
+                frame = ws.receive_json()
+                while frame["type"] != "tag_values":
+                    frame = ws.receive_json()
+                assert "Sine" in frame["values"] and "SineHigh" in frame["alarms"]
+        finally:
+            assert client.delete(f"/api/sessions/{sid}", headers={"X-API-Key": key}).status_code == 204
+            assert client.portal is not None
+            client.portal.call(manager.close)
