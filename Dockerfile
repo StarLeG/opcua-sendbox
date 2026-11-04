@@ -37,7 +37,13 @@ LABEL org.opencontainers.image.title="opcua-sendbox" \
 # Приложение работает под непривилегированным пользователем.
 RUN useradd --create-home --uid 10001 appuser
 
+# Каталог сертификатов в образе принадлежит appuser: новый именованный том
+# наследует эти права, а существующий чинит точка входа (ADR-004).
+RUN mkdir -p /data/certs && chown appuser:appuser /data/certs
+
 COPY --from=builder /opt/venv /opt/venv
+COPY deploy/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
@@ -46,7 +52,10 @@ ENV PATH="/opt/venv/bin:$PATH" \
 # Порт только в документации EXPOSE: реальный маппинг — docker-compose.yml.
 EXPOSE 4840-5000/tcp 8766/tcp
 
-USER appuser
+# Старт от root: точка входа выставляет права на каталог сертификатов
+# и передаёт управление appuser (deploy/docker-entrypoint.sh).
+USER root
 WORKDIR /home/appuser
 
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["python", "-m", "app"]
